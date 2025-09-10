@@ -14,6 +14,40 @@ enum class parkingSpotType {
     disabled,    
     motorcycle  
 };
+class user{
+private:
+    string name;
+    string userID;
+    long long contact;
+    string email;
+    vehicleType Type;
+    static int userCount;
+    time_t entryTime;
+public:
+    user(string name, string userID, long long contact, string email, vehicleType Type){
+        this->name=name;
+        this->userID=userID;;
+        this->contact=contact;
+        this->email=email;
+        this->Type=Type;
+        userCount++;
+        entryTime=time(NULL);
+    }  
+    void showInfo() const{ 
+        cout<<"User: "<<name<<" | ID: "<< userID<<" | Contact: "<<contact 
+        <<" | Email: "<<email<<" | Vehicle Type: "<<Type<<"\n";
+    }
+    static int getUserCount() { 
+        return userCount; 
+    }
+    void saveToFile(const string &filename) const {
+        ofstream fout(filename, ios::app);
+        fout<<name<<" | "<<userID<<" | "<<contact<<" | " 
+        <<email<<" | VehicleType: "<<(int)Type
+        <<" | Entry: "<<ctime(&entryTime);
+        fout.close();
+    }
+};
 class parkingGarage {
 private:
     string name;
@@ -115,6 +149,78 @@ public:
     friend void checkSpotDetails(const parkingSpot &spot){
         cout<<"[Friend Function] Spot ID: "<<spot.spotID<<", Status: ";
         cout<<"\n";
+    }
+};
+
+class dynamicPrice {
+public:
+    static int calRate(int occupied, int capacity, string type, bool isCharging=false) {
+        int mRate;
+
+        if(type=="Bike") {
+          mRate=20;
+        } 
+        else if(type=="Car") {
+            mRate=40;
+        }
+        else if(type=="EV") {
+            mRate=60;
+        }
+        else if(type=="Truck") {
+            mRate = 100; 
+        }
+        else {
+            mRate=50;
+        } 
+
+        double ratio = (double)occupied / capacity;
+
+        if(ratio < 0.3) {
+            mRate *= 0.8; 
+        }     
+        else if(ratio > 0.8) {
+            mRate *= 1.5; 
+        } 
+
+        if(type=="EV" && isCharging) {
+            mRate *= 1.2;
+        }
+
+        return mRate;
+    }
+};
+class Payment{
+    static int totalTwoWheelerRevenue;
+    static int totalFourWheelerRevenue;
+    static int totalTruckRevenue;
+    static int totalEVRevenue;
+public:
+    Payment(){
+        totalTwoWheelerRevenue=0;
+        totalFourWheelerRevenue=0;
+        totalTruckRevenue=0;
+        totalEVRevenue=0;
+    }
+    inline static void addRevenue(int amt,string type){
+        if(type=="Bike") totalTwoWheelerRevenue+=amt;
+        else if(type=="Car") totalFourWheelerRevenue+=amt;
+        else if(type=="Truck") totalTruckRevenue+=amt;
+        else if(type=="EV") totalEVRevenue+=amt;
+    }
+    inline static void showRevenue(){
+        cout<<"Two-Wheeler Revenue: Rs "<<totalTwoWheelerRevenue<<"\n";
+        cout<<"Four-Wheeler Revenue: Rs "<<totalFourWheelerRevenue<<"\n";
+        cout<<"Truck Revenue: Rs "<<totalTruckRevenue<<"\n";
+        cout<<"EV Revenue: Rs "<<totalEVRevenue<<"\n";
+    }
+    static void paym(int amt){
+        cout<<"Successfully Paid Rs."<<amt<<" in cash.\n";
+    }
+    static void pay(int amt,string card){ 
+        cout<<"Paid Rs."<<amt<<" using card "<<card<<"\n"; 
+    }
+    static void pay(int amt,string upi,bool check){ 
+        cout<<"Paid Rs."<<amt<<" using UPI ID "<< upi<< "\n"; 
     }
 };
 int main(){
