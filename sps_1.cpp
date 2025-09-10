@@ -25,29 +25,21 @@ private:
     time_t entryTime;
 public:
     user(string name, string userID, long long contact, string email, vehicleType Type){
-        this->name=name;
-        this->userID=userID;;
-        this->contact=contact;
-        this->email=email;
-        this->Type=Type;
-        userCount++;
-        entryTime=time(NULL);
+        this->name=name; this->userID=userID; this->contact=contact; this->email=email; this->Type=Type; userCount++; entryTime=time(NULL);
     }  
     void showInfo() const{ 
-        cout<<"User: "<<name<<" | ID: "<< userID<<" | Contact: "<<contact 
-        <<" | Email: "<<email<<" | Vehicle Type: "<<Type<<"\n";
+        cout<<"User: "<<name<<" | ID: "<< userID<<" | Contact: "<<contact<<" | Email: "<<email<<" | Vehicle Type: "<<(int)Type<<"\n";
     }
     static int getUserCount() { 
         return userCount; 
     }
     void saveToFile(const string &filename) const {
         ofstream fout(filename, ios::app);
-        fout<<name<<" | "<<userID<<" | "<<contact<<" | " 
-        <<email<<" | VehicleType: "<<(int)Type
-        <<" | Entry: "<<ctime(&entryTime);
+        fout<<name<<" | "<<userID<<" | "<<contact<<" | "<<email<<" | VehicleType: "<<(int)Type<<" | Entry: "<<ctime(&entryTime);
         fout.close();
     }
 };
+int user::userCount=0;
 class parkingGarage {
 private:
     string name;
@@ -55,9 +47,7 @@ private:
     static int totalGarages;
 public: 
     parkingGarage(const string &name, const string &location){
-        this->name=name;
-        this->location=location;
-        totalGarages++;
+        this->name=name; this->location=location; totalGarages++;
     }
     int getTotalGarages(){
         return totalGarages; 
@@ -74,11 +64,12 @@ class parkingSpot{
 private:
     string spotID;
     spotStatus status;
-    vehicleType vehicle;
     parkingSpotType type;
     time_t reservationTime;
 public:
-    parkingSpot(const string& id, vehicleType type);
+    parkingSpot(const string& id, parkingSpotType t){
+        spotID=id; type=t; status=spotStatus::free; reservationTime=0;
+    }
     string getSpotId() const{ 
         return spotID; 
     }
@@ -87,105 +78,64 @@ public:
     }
     bool isVehicleCompatibleWithSpot(vehicleType vehicle,parkingSpotType spot){
         switch(spot){
-            case parkingSpotType::standard:
-                return (vehicle == vehicleType::car || vehicle == vehicleType::disabled);
-            case parkingSpotType::premium:
-                return (vehicle == vehicleType::car);
-            case parkingSpotType::ev_charging:
-                return (vehicle == vehicleType::EV);
-            case parkingSpotType::disabled:
-                return (vehicle == vehicleType::disabled);
-            case parkingSpotType::motorcycle:
-                return (vehicle == vehicleType::motorcycle);
-            default:
-                return false;
+            case parkingSpotType::standard: return (vehicle == vehicleType::car || vehicle == vehicleType::disabled);
+            case parkingSpotType::premium: return (vehicle == vehicleType::car);
+            case parkingSpotType::ev_charging: return (vehicle == vehicleType::EV);
+            case parkingSpotType::disabled: return (vehicle == vehicleType::disabled);
+            case parkingSpotType::motorcycle: return (vehicle == vehicleType::motorcycle);
+            default: return false;
         }
     }
-    bool parkingSpot::reserve(vehicleType vehicle) {  
+    bool reserve(vehicleType vehicle) {  
         if (status != spotStatus::free) {
-            cout << "Spot " << spotID << " is not free!\n";
-            return false; 
+            cout<<"Spot "<<spotID<<" is not free!\n"; return false; 
         }
-        if (vehicle != suitableFor){
-            cout<<"Vehicle type not suitable for spot "<<spotID<<"!\n";
-            return false; 
+        if (!isVehicleCompatibleWithSpot(vehicle, type)){
+            cout<<"Vehicle type not suitable for spot "<<spotID<<"!\n"; return false; 
         }
         status=spotStatus::reserved;
-        cout<<"Spot "<< spotID<<" reserved successfully.\n";
+        cout<<"Spot "<<spotID<<" reserved successfully.\n";
         return true;  
     }
     char getSpotSymbol(parkingSpotType type) {
         switch (type){
-            case parkingSpotType::standard: 
-            return 'S';
-            case parkingSpotType::premium: 
-            return 'P';
-            case parkingSpotType::ev_charging: 
-            return 'E';
-            case parkingSpotType::disabled: 
-            return 'D';
-            case parkingSpotType::motorcycle:
-            return 'M';
+            case parkingSpotType::standard: return 'S';
+            case parkingSpotType::premium: return 'P';
+            case parkingSpotType::ev_charging: return 'E';
+            case parkingSpotType::disabled: return 'D';
+            case parkingSpotType::motorcycle: return 'M';
             default: return '?';
         }
     } 
     bool reserve(vehicleType vehicle,time_t reservedUntil){
-        if(!reserve(vehicle)){ 
-            return false;
-        }
+        if(!reserve(vehicle)){ return false; }
         reservationTime=reservedUntil;
         cout<<"Reservation for spot "<<spotID<<" is valid until "<<ctime(&reservedUntil);
         return true;
     }
     bool release(){
-        if (status==spotStatus::free) {
-            return false; 
-        }
-        status=spotStatus::free;
-        reservationTime=0;
+        if (status==spotStatus::free) { return false; }
+        status=spotStatus::free; reservationTime=0;
         cout<<"Spot "<<spotID<<" has been released.\n";
         return true;
     }
     friend void checkSpotDetails(const parkingSpot &spot){
-        cout<<"[Friend Function] Spot ID: "<<spot.spotID<<", Status: ";
-        cout<<"\n";
+        cout<<"[Friend Function] Spot ID: "<<spot.spotID<<", Status: "<<(int)spot.status<<"\n";
     }
 };
-
 class dynamicPrice {
 public:
     static int calRate(int occupied, int capacity, string type, bool isCharging=false) {
         int mRate;
-
-        if(type=="Bike") {
-          mRate=20;
-        } 
-        else if(type=="Car") {
-            mRate=40;
-        }
-        else if(type=="EV") {
-            mRate=60;
-        }
-        else if(type=="Truck") {
-            mRate = 100; 
-        }
-        else {
-            mRate=50;
-        } 
-
+        if(type=="Bike") { mRate=20; } 
+        else if(type=="Car") { mRate=40; }
+        else if(type=="EV") { mRate=60; }
+        else if(type=="Truck") { mRate = 100; }
+        else { mRate=50; }
         double ratio = (double)occupied / capacity;
-
-        if(ratio < 0.3) {
-            mRate *= 0.8; 
-        }     
-        else if(ratio > 0.8) {
-            mRate *= 1.5; 
-        } 
-
-        if(type=="EV" && isCharging) {
-            mRate *= 1.2;
-        }
-
+        if(ratio < 0.3) { mRate *= 0.8; }     
+        else if(ratio > 0.8) { mRate *= 1.5; }
+        if(type=="EV" && isCharging) { mRate *= 1.2; }
         return mRate;
     }
 };
@@ -196,10 +146,7 @@ class Payment{
     static int totalEVRevenue;
 public:
     Payment(){
-        totalTwoWheelerRevenue=0;
-        totalFourWheelerRevenue=0;
-        totalTruckRevenue=0;
-        totalEVRevenue=0;
+        totalTwoWheelerRevenue=0; totalFourWheelerRevenue=0; totalTruckRevenue=0; totalEVRevenue=0;
     }
     inline static void addRevenue(int amt,string type){
         if(type=="Bike") totalTwoWheelerRevenue+=amt;
@@ -220,10 +167,27 @@ public:
         cout<<"Paid Rs."<<amt<<" using card "<<card<<"\n"; 
     }
     static void pay(int amt,string upi,bool check){ 
-        cout<<"Paid Rs."<<amt<<" using UPI ID "<< upi<< "\n"; 
+        cout<<"Paid Rs."<<amt<<" using UPI ID "<<upi<<"\n"; 
     }
 };
+int Payment::totalTwoWheelerRevenue=0;
+int Payment::totalFourWheelerRevenue=0;
+int Payment::totalTruckRevenue=0;
+int Payment::totalEVRevenue=0;
 int main(){
-
+    parkingSpot s1("A1", parkingSpotType::standard);
+    s1.reserve(vehicleType::car);
+    s1.release();
+    checkSpotDetails(s1);
+    user u1("Naman","U123",9876543210,"naman@mail.com",vehicleType::car);
+    u1.showInfo();
+    u1.saveToFile("users.txt");
+    int rate=dynamicPrice::calRate(10,50,"Car");
+    cout<<"Rate: "<<rate<<"\n";
+    Payment::addRevenue(rate,"Car");
+    Payment::showRevenue();
+    Payment::paym(rate);
+    Payment::pay(rate,"1234-5678-9012");
+    Payment::pay(rate,"naman@upi",true);
     return 0;
 }
