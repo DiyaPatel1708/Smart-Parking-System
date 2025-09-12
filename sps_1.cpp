@@ -14,6 +14,35 @@ enum class parkingSpotType {
     disabled,    
     motorcycle  
 };
+string to_string(vehicleType type) {
+    switch (type) {
+        case vehicleType::car: return "Car";
+        case vehicleType::motorcycle: return "Motorcycle";
+        case vehicleType::EV: return "EV";
+        case vehicleType::disabled: return "Disabled";
+        default: return "Unknown";
+    }
+}
+string to_string(spotStatus status) {
+    switch (status) {
+        case spotStatus::free: return "Free";
+        case spotStatus::reserved: return "Reserved";
+        case spotStatus::occupied: return "Occupied";
+        case spotStatus::maintenance: return "Maintenance";
+        default: return "Unknown";
+    }
+}
+string to_string(parkingSpotType type) {
+    switch (type) {
+        case parkingSpotType::standard: return "Standard";
+        case parkingSpotType::premium: return "Premium";
+        case parkingSpotType::ev_charging: return "EV Charging";
+        case parkingSpotType::disabled: return "Disabled";
+        case parkingSpotType::motorcycle: return "Motorcycle";
+        default: return "Unknown";
+    }
+}
+
 class user{
 private:
     string name;
@@ -28,7 +57,11 @@ public:
         this->name=name; this->userID=userID; this->contact=contact; this->email=email; this->Type=Type; userCount++; entryTime=time(NULL);
     }  
     void showInfo() const{ 
-        cout<<"User: "<<name<<" | ID: "<< userID<<" | Contact: "<<contact<<" | Email: "<<email<<" | Vehicle Type: "<<(int)Type<<"\n";
+        cout<<"User: "<<name
+    <<" | ID: "<<userID
+    <<" | Contact: "<<contact
+    <<" | Email: "<<email
+    <<" | Vehicle Type: "<<to_string(Type)<<"\n";
     }
     static int getUserCount() { 
         return userCount; 
