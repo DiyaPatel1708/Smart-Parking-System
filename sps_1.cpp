@@ -177,10 +177,9 @@ class Payment{
     static int totalFourWheelerRevenue;
     static int totalTruckRevenue;
     static int totalEVRevenue;
+private:
+    Payment() {}
 public:
-    Payment(){
-        totalTwoWheelerRevenue=0; totalFourWheelerRevenue=0; totalTruckRevenue=0; totalEVRevenue=0;
-    }
     inline static void addRevenue(int amt,string type){
         if(type=="Bike") totalTwoWheelerRevenue+=amt;
         else if(type=="Car") totalFourWheelerRevenue+=amt;
