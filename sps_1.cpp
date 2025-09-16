@@ -40,7 +40,13 @@ public:
         fout<<name<<" | "<<userID<<" | "<<contact<<" | "<<email<<" | VehicleType: "<<(int)Type<<" | Entry: "<<ctime(&entryTime);
         fout.close();
     }
+
+    friend void displayContact(const user& u);
 };
+void displayContact(const user& u){
+    cout << "Contact of " << u.name << " is: " << u.contact << "\n";
+}
+
 int user::userCount=0;
 class parkingGarage {
 private:
@@ -76,6 +82,8 @@ public:
         status=spotStatus::free; 
         reservationTime=0;
     }
+    friend void debugSpot(const parkingSpot& ps);
+
     string getSpotId() const{ 
         return spotID; 
     }
@@ -130,7 +138,13 @@ public:
     void checkSpotDetails(const parkingSpot &spot){
         cout<<"Spot ID: "<<spot.spotID<<", Status: "<<(int)spot.status<<"\n";
     }
+
 };
+void debugSpot(const parkingSpot& ps){
+    cout << "[DEBUG] Spot " << ps.spotID 
+         << " | Status: " << (int)ps.status << "\n";
+}
+
 class dynamicPrice {
 public:
     static int calRate(int occupied,int capacity,vehicleType type, parkingSpotType spot, bool isCharging=false){ 
@@ -201,8 +215,10 @@ int Payment::totalEVRevenue=0;
 int main(){
     parkingSpot* s1 = new parkingSpot("A1", parkingSpotType::standard);
     s1->reserve(vehicleType::motorcycle);
+    debugSpot(*s1);
     user* u1 = new user("Naman","U123",9876543210);
     u1->showInfo();
+    displayContact(*u1);
     u1->saveToFile("users.txt");
     
     int rate=dynamicPrice::calRate(10,50,vehicleType::motorcycle,parkingSpotType::motorcycle,false);
