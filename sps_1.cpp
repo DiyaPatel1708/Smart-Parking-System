@@ -199,11 +199,12 @@ int Payment::totalDisabledRevenue=0;
 int Payment::totalEVRevenue=0;
 
 int main(){
-    parkingSpot s1("A1", parkingSpotType::standard);
-    s1.reserve(vehicleType::motorcycle);
-    user u1("Naman","U123",9876543210,"naman@mail.com",vehicleType::motorcycle,parkingSpotType::motorcycle);
-    u1.showInfo();
-    u1.saveToFile("users.txt");
+    parkingSpot* s1 = new parkingSpot("A1", parkingSpotType::standard);
+    s1->reserve(vehicleType::motorcycle);
+    user* u1 = new user("Naman","U123",9876543210);
+    u1->showInfo();
+    u1->saveToFile("users.txt");
+    
     int rate=dynamicPrice::calRate(10,50,vehicleType::motorcycle,parkingSpotType::motorcycle,false);
     cout<<"Rate: "<<rate<<"\n";
     Payment::addRevenue(rate,vehicleType::motorcycle);
@@ -211,5 +212,13 @@ int main(){
     Payment::pay(rate);
     Payment::pay(rate,"1234-5678-9012");
     Payment::pay(rate,"naman@upi",true);
+
+    parkingGarage* g1 = new parkingGarage("City Center Garage","Downtown");
+    g1->displayInfo();
+//cleanup
+    delete g1;
+    delete s1;
+    delete u1;
+
     return 0;
 }
