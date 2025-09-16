@@ -1,9 +1,9 @@
-# Smart Parking System 🚗🅿️
+# Smart Parking System 
 
 This project is a **Smart Parking System implemented in C++**.  
 It simulates a real-world parking management system with features like spot reservation, dynamic pricing, user records, and revenue tracking.  
 
-## ✨ Features
+##  Features
 - **User Management**: Store user details (name, contact, email, vehicle type, entry time).
 - **Parking Spots**: Different types (Standard, Premium, EV charging, Motorcycle, Disabled).
 - **Dynamic Pricing**: Parking rates vary based on occupancy and vehicle type.
@@ -14,7 +14,7 @@ It simulates a real-world parking management system with features like spot rese
 - **Default Arguments**: Used in constructors and functions to simplify usage.
 - **Dynamic Memory Allocation**: Objects created with `new/delete`.
 
-## 🛠️ Concepts Implemented
+##  Concepts Implemented
 - Default Arguments  
 - Dynamic Memory Allocation  
 - Friend Functions  
@@ -23,7 +23,7 @@ It simulates a real-world parking management system with features like spot rese
 - File Handling  
 - Static Members  
 
-## 📂 File Structure
+##  File Structure
 - `sps_1.cpp` → Main project source code  
 - `users.txt` → Stores user data (created at runtime)  
    ```bash
