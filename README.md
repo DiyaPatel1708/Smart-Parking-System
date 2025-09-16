@@ -15,11 +15,15 @@ It simulates a real-world parking management system with features like spot rese
 - **Dynamic Memory Allocation**: Objects created with `new/delete`.
 
 ##  Concepts Implemented
+-Encapsulation
+-Abstraction
+-Polymorphism
+-Inheritance
+- Function Overloading
+-Enums and Classes
 - Default Arguments  
 - Dynamic Memory Allocation  
-- Friend Functions  
-- Function Overloading  
-- Enums and Classes  
+- Friend Functions      
 - File Handling  
 - Static Members  
 
