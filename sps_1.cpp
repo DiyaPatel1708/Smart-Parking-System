@@ -194,18 +194,17 @@ public:
         cout<<"Disabled vehicle Revenue: Rs "<<totalDisabledRevenue<<"\n";
         cout<<"EV Revenue: Rs "<<totalEVRevenue<<"\n";
     }
-    static void pay(int amt){
-        cout<<"Payment Successful ||"
-            <<" Rs."<<amt<<" in cash.\n";
-    }
-    static void pay(int amt,string card){
-        cout<<"Payment Successful ||" 
-            <<" Rs."<<amt<<" using card \n";
-    }
-    static void pay(int amt,string upi,bool check){ 
-        cout<<"Payment Successful ||" 
-            <<" Rs."<<amt<<" using UPI \n";
-    }
+    static void pay(int amt, string method="cash"){
+    if(method=="cash")
+        cout<<"Payment Successful || Rs."<<amt<<" in cash.\n";
+    else
+        cout<<"Payment Successful || Rs."<<amt<<" using card.\n";
+}
+
+    static void pay(int amt, string upi, bool isUpi){
+    if(isUpi)
+        cout<<"Payment Successful || Rs."<<amt<<" using UPI ("<<upi<<").\n";
+}
 };
 int Payment::totalTwoWheelerRevenue=0;
 int Payment::totalFourWheelerRevenue=0;
