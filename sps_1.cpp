@@ -19,7 +19,8 @@ private:
     static int userCount;
     time_t entryTime;
 public:
-    user(string name, string userID, long long contact, string email, vehicleType Type, parkingSpotType spotType){
+    user(string name, string userID, long long contact, string email = "not_provided@mail.com", 
+     vehicleType Type = vehicleType::car, parkingSpotType spotType = parkingSpotType::standard){
         this->name=name; 
         this->userID=userID; 
         this->contact=contact; 
