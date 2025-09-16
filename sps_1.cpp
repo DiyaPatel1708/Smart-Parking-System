@@ -161,14 +161,20 @@ public:
                 break;
             }
             case vehicleType::disabled:{
-                int mRate=30;
+                mRate = 30;   
                 break;
             }
+
+            case vehicleType::EV:{
+                mRate = 120;   
+                if(isCharging) mRate *= 1.2;  
+                break;
+            }
+
         }
         double ratio = (double)occupied / capacity;
         if(ratio < 0.3) mRate *= 0.8;     
-        else if(ratio > 0.8) mRate *= 1.5; 
-        if(type==vehicleType::EV && isCharging) mRate *= 1.2; 
+        else if(ratio > 0.8) mRate *= 1.5;  
         return mRate;
 
     }
