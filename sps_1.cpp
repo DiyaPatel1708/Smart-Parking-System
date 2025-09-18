@@ -1,21 +1,51 @@
-#include <iostream>
+#include<iostream>
 #include<string>
-#include<limits>
-#include<unordered_map>
 #include<ctime>
+#include<vector>
 #include<fstream>
-#include<sstream>
 using namespace std;
 
 enum class vehicleType{cycle,fiveSeaterCar,sevenSeaterCar,motorcycle,EV,disabled,bus,truck};
 enum class spotStatus {free,reserved,occupied,maintenance};
-enum class parkingSpotType {
-    standard,    
-    premium,     
-    ev_charging, 
-    disabled,    
-    motorcycle  
+enum class parkingSpotType {cycle,standard,premium,ev_charging,motorcycle,compact,large,small,family,disabled,bus};
+class user{
+private:
+    string name;
+    string userID;
+    long long contact;
+    string email;
+    vehicleType Type;
+    parkingSpotType spotType;
+    static int userCount;
+    time_t entryTime;
+public:
+    user(string name, string userID, long long contact, vehicleType Type, string email = "not_provided"){
+        this->name=name; 
+        this->userID=userID; 
+        this->contact=contact; 
+        this->email=email; 
+        this->Type=Type; 
+        userCount++; 
+        entryTime=time(NULL);
+    }  
+    void showInfo() const{ 
+        cout<<"User: "<<name<<" | ID: "<<userID<<" | Contact: "<<contact<<" | Email: "<<email<<" | Vehicle Type: "<<(int)Type<<"\n";
+    }
+    static int getUserCount() { 
+        return userCount; 
+    }
+    void saveToFile(const string &filename) const {
+        ofstream fout(filename, ios::app);
+        fout<<name<<" | "<<userID<<" | "<<contact<<" | "<<email<<" | VehicleType: "<<(int)Type<<" | Entry: "<<ctime(&entryTime);
+        fout.close();
+    }
+
+    friend void displayContact(const user& u);
 };
+void displayContact(const user& u){
+    cout << "Contact of " << u.name << " is: " << u.contact << "\n";
+}
+int user::userCount=0;
 class parkingGarage {
 private:
     string name;
@@ -287,4 +317,3 @@ int main(){
 
     return 0;
 }
->>>>>>> 9d1b1d59743e0b575879bc465a3635a3331d301f
