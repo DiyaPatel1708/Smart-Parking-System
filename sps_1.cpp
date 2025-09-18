@@ -252,39 +252,40 @@ public:
         int paymentType;
         cout<<"Select Option from above for Payment: ";
         cin>>paymentType;
+        int amt;
         switch(paymentType){
-            case 1:
+            case 1:{
                 cout<<"Enter Amount: ";
-                int amt;
                 cin>>amt;
                 cout<<"Payment Successful\n";
-            break;
-            case 2:
+            break;}
+            case 2:{
                 cout<<"Enter Card Number: ";
                 long long cardnum;
                 cin>>cardnum;
                 cout<<"Enter Amount: ";
-                int amt;
                 cin>>amt;
                 string cardNum=to_string(cardnum);
-                if(13<=cardNum.length() && cardNum.length()<=19) cout<<"Payment Successful\n";
+                if(cardNum.length()>=13 && cardNum.length()<=19) cout<<"Payment Successful\n";
                 else cout<<"Please Enter valid card number\n";
-            break;
-            case 3:
+            break;}
+            case 3:{
+                int bankType; 
                 cout<<"1. HDFC\n2. SBI\n3. Axis\n4. ICICI\n5. Bank of Baroda\n 6. Punjab National Banking\n7. IndusInd Bank\n";
                 cout<<"Select Option from above for Payment: ";
-                cin>>paymentType;
+                cin>>bankType;
+                cout<<"Enter Amount: ";
+                cin>>amt;
                 cout<<"Payment Successful\n";  
-            break;
-            case 4:
+            break;}
+            case 4:{
                 string upiID;
                 cout<<"Enter UPI ID: ";
                 cin>>upiID;
                 cout<<"Enter Amount: ";
-                int amt;
                 cin>>amt;
                 cout<<"Payment Successful\n";
-            break;
+            break;}
         }
     }
 };
@@ -306,9 +307,7 @@ int main(){
     cout<<"Rate: "<<rate<<"\n";
     Payment::addRevenue(rate,vehicleType::motorcycle);
     Payment::showRevenue();
-    Payment::pay(rate,cash);
-    Payment::pay(rate,"1234-5678-9012");
-    Payment::pay(rate,"naman@upi",true);
+    Payment::pay();
 
     parkingGarage* g1 = new parkingGarage("City Center Garage","Downtown");
     g1->displayInfo();
