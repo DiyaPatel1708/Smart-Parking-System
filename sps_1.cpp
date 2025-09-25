@@ -99,7 +99,6 @@ public:
 friend void displayContact(const user& u);
     friend vehicleType getVehicleType(const user& u);
 
-    // ---------- Operator Overloading ----------
     friend ostream& operator<<(ostream& os, const user& u) {
         os << "User: " << u.name << " | ID: " << u.userID 
            << " | Contact: " << u.contact 
