@@ -32,7 +32,7 @@ public:
         this->email=email; 
         this->Type=Type; 
         userCount++; 
-                this->score = 0;
+        this->score = 0;
         this->useCount = 0;
         this->rating = 0;
 
