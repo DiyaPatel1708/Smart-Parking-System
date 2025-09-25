@@ -99,27 +99,8 @@ public:
 friend void displayContact(const user& u);
     friend vehicleType getVehicleType(const user& u);
 
-    friend ostream& operator<<(ostream& os, const user& u) {
-        os << "User: " << u.name << " | ID: " << u.userID 
-           << " | Contact: " << u.contact 
-           << " | Vehicle Type: " << static_cast<int>(u.Type)
-           << " | Rating: " << (u.rating==0 ? "Not rated" : to_string(u.rating)+" star(s)")
-           << " | Review: " << (u.review.empty() ? "No review" : u.review);
-        return os;
-    }
 
 
-    friend bool operator==(const user& u1, const user& u2) {
-        return u1.userID == u2.userID;
-    }
-
-    friend bool operator<(const user& u1, const user& u2) {
-        return u1.name < u2.name;
-    }
-
-    friend bool operator!=(const user& u1, const user& u2) {
-        return !(u1 == u2);
-    }
 
 
 
@@ -494,11 +475,8 @@ int main() {
         else if(choice == 6) {
             loadUsers(users, "users.txt");
         }
-        else if(choice == 7) { // View Stored Users
-    if(users.empty()) { cout << "No users registered yet!\n"; break; }
-    cout << "\n--- Stored Users ---\n";
-    for(auto &p : users) {
-        cout << *(p.second) << "\n";  // Using operator<< instead of manual print
+        else if(choice == 7) { 
+
     }
 }
 
