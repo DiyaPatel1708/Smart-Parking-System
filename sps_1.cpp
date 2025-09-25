@@ -138,8 +138,11 @@ public:
     int getTotalGarages(){
         return totalGarages; 
     }
-    void displayInfo() const{
-        cout<<"Garage: "<<name<<" at "<<location<<"\n";
+    void operator()() const {
+        cout << "=== Garage Information ===\n";
+        cout << "Name: " << name << "\n";
+        cout << "Location: " << location << "\n";
+        cout << "Total Garages in system: " << totalGarages << "\n";
     }
     ~parkingGarage(){
         totalGarages--;
@@ -181,6 +184,21 @@ public:
             case parkingSpotType::family: return (vehicle == vehicleType::sevenSeaterCar || vehicle == vehicleType::bus || vehicle == vehicleType::truck || vehicle == vehicleType::cycle || vehicle == vehicleType::motorcycle || vehicle == vehicleType::fiveSeaterCar || vehicle == vehicleType::disabled || vehicle == vehicleType::EV);
             default: return false;
         }
+    }
+    parkingSpot& operator++() {
+        if (status == spotStatus::reserved) {
+            status = spotStatus::occupied;
+            cout << "Spot " << spotID << " is now occupied.\n";
+        }
+        return *this;
+    }
+    parkingSpot& operator--() {
+        if (status == spotStatus::occupied || status == spotStatus::reserved) {
+            status = spotStatus::free;
+            reservationTime = 0;
+            cout << "Spot " << spotID << " is now free.\n";
+        }
+        return *this;
     }
     bool reserve(vehicleType vehicle) {  
         if (status != spotStatus::free) {
