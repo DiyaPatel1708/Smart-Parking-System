@@ -19,6 +19,11 @@ class user {
     parkingSpotType spotType;
     static int userCount;
     time_t entryTime;
+    int score;
+    int useCount;
+    int rating;
+    string review;
+
 public:
     user(string name, string userID, long long contact, vehicleType Type, string email = "not_provided"){
         this->name=name; 
@@ -27,19 +32,99 @@ public:
         this->email=email; 
         this->Type=Type; 
         userCount++; 
+                this->score = 0;
+        this->useCount = 0;
+        this->rating = 0;
+
         entryTime=time(NULL);
     }  
-    void showInfo() const{ 
-        cout<<"User: "<<name<<" | ID: "<<userID<<" | Contact: "<<contact<<" | Email: "<<email<<" | Vehicle Type: "<<(int)Type<<"\n";
+    void showInfo() const {
+        cout << "User: " << name << " | ID: " << userID << " | Contact: " << contact
+             << " | Email: " << email << " | Vehicle Type: " << (int)Type
+             << " | Rating: " << (rating==0 ? "Not rated" : to_string(rating)+" star(s)")
+             << " | Review: " << (review.empty() ? "No review" : review)
+             << "\n";
     }
+
     static int getUserCount() { 
         return userCount; 
     }
+
+
     void saveToFile(const string &filename) const {
         ofstream fout(filename, ios::app);
-        fout<<name<<" | "<<userID<<" | "<<contact<<" | "<<email<<" | VehicleType: "<<(int)Type<<" | Entry: "<<ctime(&entryTime);
+        fout << name << " | " << userID << " | " << contact
+             << " | " << email << " | VehicleType: " << (int)Type
+             << " | Entry: " << ctime(&entryTime)
+             << " | Rating: " << (rating==0 ? "Not rated" : to_string(rating)+" star(s)")
+             << " | Review: " << (review.empty() ? "No review" : review)
+             << "\n";
         fout.close();
     }
+
+    void recordUsage() {
+        useCount++;
+        score += 5;
+    }
+
+    void showScore() {
+        cout << name << " used the system. Usage Count: " << useCount << " | Score: " << score << "\n";
+    }
+
+
+    int getDiscountedRate(int baseRate) {
+        if(score >= 50) {
+            cout << "Discount applied! 10% off.\n";
+            return static_cast<int>(baseRate * 0.9);
+        }
+        return baseRate;
+    }
+
+    void setRating(int r) {
+        if(r < 1 || r > 5) {
+            cout << "Invalid rating! Must be 1-5 stars.\n";
+            return;
+        }
+        rating = r;
+        cout << "Rating recorded: " << rating << " star(s)\n";
+        if(rating==1 || rating==2) cout<<"Will try better next time. ";
+        cout<<"Thanks for choosing us!\n";
+    }
+
+    void setReview(const string &r) {
+        review = r;
+        cout << "Review recorded!\n";
+    }
+
+friend void displayContact(const user& u);
+    friend vehicleType getVehicleType(const user& u);
+
+    // ---------- Operator Overloading ----------
+    friend ostream& operator<<(ostream& os, const user& u) {
+        os << "User: " << u.name << " | ID: " << u.userID 
+           << " | Contact: " << u.contact 
+           << " | Vehicle Type: " << static_cast<int>(u.Type)
+           << " | Rating: " << (u.rating==0 ? "Not rated" : to_string(u.rating)+" star(s)")
+           << " | Review: " << (u.review.empty() ? "No review" : u.review);
+        return os;
+    }
+
+
+    friend bool operator==(const user& u1, const user& u2) {
+        return u1.userID == u2.userID;
+    }
+
+    friend bool operator<(const user& u1, const user& u2) {
+        return u1.name < u2.name;
+    }
+
+    friend bool operator!=(const user& u1, const user& u2) {
+        return !(u1 == u2);
+    }
+
+
+
+
     static void readFromFile(const string &filename) {
         ifstream fin(filename);
         string line;
@@ -48,11 +133,17 @@ public:
         }
         fin.close();
     }
-    void displayContact(const user& u){
-        cout << "Contact of " << u.name << " is: " << u.contact << "\n";
-    }
+
 };
 int user::userCount=0;
+void displayContact(const user& u) {
+    cout << "Contact of " << u.name << " is: " << u.contact << "\n";
+}
+vehicleType getVehicleType(const user& u) {
+    return u.Type;
+}
+
+
 class parkingGarage {
 private:
     string name;
@@ -404,9 +495,14 @@ int main() {
         else if(choice == 6) {
             loadUsers(users, "users.txt");
         }
-        else if(choice == 7) {
-            user::readFromFile("users.txt");
-        }
+        else if(choice == 7) { // View Stored Users
+    if(users.empty()) { cout << "No users registered yet!\n"; break; }
+    cout << "\n--- Stored Users ---\n";
+    for(auto &p : users) {
+        cout << *(p.second) << "\n";  // Using operator<< instead of manual print
+    }
+}
+
         else if(choice == 8) {
             ifstream fin("transactions.txt");
             if(!fin) { cout<<"No transactions found!\n"; }
