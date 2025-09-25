@@ -27,7 +27,7 @@ public:
         vType = v;
         rating = 0;
     }
-
+int a;
     string getId() { return id; }
     string getName() { return name; }
     vehicleType getVehicleType() { return vType; }
