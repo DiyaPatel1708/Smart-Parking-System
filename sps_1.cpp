@@ -23,7 +23,6 @@ class user {
     int useCount;
     int rating;
     string review;
-
 public:
     user(string name, string userID, long long contact, vehicleType Type, string email = "not_provided"){
         this->name=name; 
@@ -35,7 +34,6 @@ public:
         this->score = 0;
         this->useCount = 0;
         this->rating = 0;
-
         entryTime=time(NULL);
     }  
     void showInfo() const {
@@ -45,12 +43,9 @@ public:
              << " | Review: " << (review.empty() ? "No review" : review)
              << "\n";
     }
-
     static int getUserCount() { 
         return userCount; 
     }
-
-
     void saveToFile(const string &filename) const {
         ofstream fout(filename, ios::app);
         fout << name << " | " << userID << " | " << contact
@@ -61,17 +56,13 @@ public:
              << "\n";
         fout.close();
     }
-
     void recordUsage() {
         useCount++;
         score += 5;
     }
-
     void showScore() {
         cout << name << " used the system. Usage Count: " << useCount << " | Score: " << score << "\n";
     }
-
-
     int getDiscountedRate(int baseRate) {
         if(score >= 50) {
             cout << "Discount applied! 10% off.\n";
@@ -79,7 +70,6 @@ public:
         }
         return baseRate;
     }
-
     void setRating(int r) {
         if(r < 1 || r > 5) {
             cout << "Invalid rating! Must be 1-5 stars.\n";
@@ -90,21 +80,12 @@ public:
         if(rating==1 || rating==2) cout<<"Will try better next time. ";
         cout<<"Thanks for choosing us!\n";
     }
-
     void setReview(const string &r) {
         review = r;
         cout << "Review recorded!\n";
     }
-
-friend void displayContact(const user& u);
+    friend void displayContact(const user& u);
     friend vehicleType getVehicleType(const user& u);
-
-
-
-
-
-
-
     static void readFromFile(const string &filename) {
         ifstream fin(filename);
         string line;
@@ -113,7 +94,6 @@ friend void displayContact(const user& u);
         }
         fin.close();
     }
-
 };
 int user::userCount=0;
 void displayContact(const user& u) {
@@ -122,8 +102,6 @@ void displayContact(const user& u) {
 vehicleType getVehicleType(const user& u) {
     return u.Type;
 }
-
-
 class parkingGarage {
 private:
     string name;
@@ -396,17 +374,14 @@ public:
         }
     }
 };
-
 int Payment::totalTwoWheelerRevenue = 0;
 int Payment::totalFourWheelerRevenue = 0;
 int Payment::totalDisabledRevenue = 0;
 int Payment::totalBusRevenue=0;
 int Payment::totalEVRevenue = 0;
-
 void loadUsers(unordered_map<string, user*> &users, const string &filename) {
     ifstream fin(filename);
     if(!fin) return;
-
     string line;
     while(getline(fin, line)) {
         cout << "[INFO] Skipping load from file for now: " << line << "\n";
@@ -417,7 +392,6 @@ void loadUsers(unordered_map<string, user*> &users, const string &filename) {
 int main() {
     unordered_map<string, user*> users;
     loadUsers(users, "users.txt");
-
     int choice;
     do {
         cout << "\nSmart Parking System Menu:\n";
@@ -493,11 +467,6 @@ int main() {
         else if(choice == 6) {
             loadUsers(users, "users.txt");
         }
-        else if(choice == 7) { 
-
-    }
-}
-
         else if(choice == 8) {
             ifstream fin("transactions.txt");
             if(!fin) { cout<<"No transactions found!\n"; }
@@ -510,7 +479,6 @@ int main() {
                 fin.close();
             }
         }
-    } while(choice != 0);
-
+} while(choice != 0);
     return 0;
 }
