@@ -8,6 +8,8 @@ using namespace std;
 
 enum class vehicleType { cycle, fiveSeaterCar, sevenSeaterCar, motorcycle, EV, disabled, bus, truck };
 enum class spotStatus { free, reserved, occupied, maintenance };
+enum class parkingSpotType {standard,premium,ev_charging,motorcycle, disabled};
+
 
 class user {
     string name;
@@ -27,7 +29,7 @@ public:
         vType = v;
         rating = 0;
     }
-int a;
+
     string getId() { return id; }
     string getName() { return name; }
     vehicleType getVehicleType() { return vType; }
