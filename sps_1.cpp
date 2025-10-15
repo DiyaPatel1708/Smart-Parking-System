@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <cctype>
+
 using namespace std;
 
 enum class vehicleType { car, motorcycle, EV, disabled };
@@ -24,6 +25,41 @@ bool parseIntInRange(const string &s, int &out, int minv, int maxv) {
 bool isAllDigits(const string &s) {
     if (s.empty()) return false;
     for (char c : s) if (!isdigit((unsigned char)c)) return false;
+    return true;
+}
+
+bool isEmailValid(const string &email) {
+    size_t atpos=email.find('@');
+    size_t dotpos=email.find('.', atpos+1);
+
+    if(atpos==string::npos || dotpos==string::npos) {
+        return false;
+    }
+    if(atpos==0 || dotpos==0) {
+        return false;
+    }
+if(atpos==email.size() -1 || dotpos==email.size() -1) {
+    return false;
+}
+
+if(atpos>dotpos) {
+    return false;
+}
+
+if(email.find(' ')!=string::npos) {
+    return false;
+}
+
+return true;
+
+}
+
+bool isBlank(const string &s) {
+    for(char c:s) {
+        if(!isspace((unsigned char) c)) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -257,11 +293,37 @@ int main(){
 
         switch(choice) {
             case 1: { // Register user
-                cout << "Enter Name: ";
-                string name; getline(cin, name);
-                cout << "Enter User ID: ";
-                string id; getline(cin, id);
+                string name; 
+                
+                                while(true) {
 
+                cout << "Enter Name: ";
+                getline(cin, name);
+                if (name.empty() || isBlank(name)) {
+    cout << "Please enter a valid name!\n";
+    
+}
+else{
+    break;
+}
+
+                }
+                string id; 
+
+                while(true) {
+
+                
+  
+                cout << "Enter User ID: ";
+                getline(cin, id);
+                if(id.empty() || isBlank(id)) {
+                        cout << "Please enter a valid user ID!\n";
+
+                }
+                else{
+                    break;
+                }
+            }
                 string contactStr;
                 while(true){
                     cout << "Enter Contact (10 digits): ";
@@ -271,9 +333,18 @@ int main(){
                 }
                 long long contact = stoll(contactStr);
 
+                string email;
+                while (true) {
                 cout << "Enter Email: ";
-                string email; getline(cin,email);
-                if(email.empty()) email = "not_provided@mail.com";
+                getline(cin, email);
+                if (email.empty()) {
+                email = "not_provided@mail.com";
+                break;
+    }
+    if (isEmailValid(email)) break;
+    cout << "Invalid email format! Please enter a valid email\n";
+}
+
 
                 cout << "Select Vehicle Type:\n1. Car\n2. Motorcycle\n3. EV\n4. Disabled\n";
                 string vline; getline(cin, vline); int vChoice;
@@ -289,6 +360,7 @@ int main(){
                     default: users[id]=new CarUser(name,id,contact,email); break;
                 }
                 cout<<"User Registered Successfully!\n";
+                users[id]->saveToFile("users.txt");
                 break;
             }
 
