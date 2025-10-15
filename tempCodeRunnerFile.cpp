@@ -4,7 +4,6 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
-#include <vector>
 #include <string>
 #include <unordered_map>
 
@@ -125,14 +124,6 @@ class user {
     this->useCount = 0;
     userCount++;
     entryTime = time(NULL);
-  }
-
-  virtual void greet() const {
-    cout << "Hello " << name << "! Welcome back.\n";
-  }
-  
-  virtual void displayParkingMessage() const {
-    cout << name << ", choose your spot carefully!\n";
   }
 
   virtual ~user() {}
@@ -282,16 +273,8 @@ class EVUser : public user {
              parkingSpotType::ev_charging, email) {}
 
   void showInfo() const override {
-        cout << "[EV User] ";
-        user::showInfo();
-  }
-
-  void greet() const override {
-        cout << "Hello " << name << "! Enjoy your EV perks today!\n";
-  }
-
-  void displayParkingMessage() const override {
-        cout << name << ", select EV charging spot for extra benefits!\n";
+    cout << "[EV User] ";
+    user::showInfo();
   }
 
   int getDiscountedRate(int baseRate) const override {
@@ -307,10 +290,7 @@ class DisabledUser : public user {
                string email = "not_provided@mail.com")
       : user(name, userID, contact, vehicleType::disabled,
              parkingSpotType::disabled, email) {}
-  void displayParkingMessage() const override {
-        cout << name << ", reserved spots for disabled users available!\n";
-  }
-  
+
   void showInfo() const override {
     cout << "[Disabled User] ";
     user::showInfo();
@@ -621,101 +601,19 @@ int Payment::totalDisabledRevenue = 0;
 int Payment::totalEVRevenue = 0;
 
 void loadUsers(unordered_map<string, user *> &users, const string &filename) {
-    ifstream fin(filename);
-    if (!fin) {
-        cout << "No user file found. Starting fresh.\n";
-        return;
-    }
+  ifstream fin(filename);
+  if (!fin) return;
 
-    auto trim = [](string &s) {
-        size_t start = s.find_first_not_of(" \t\n\r");
-        size_t end = s.find_last_not_of(" \t\n\r");
-        if (start == string::npos || end == string::npos)
-            s = "";
-        else
-            s = s.substr(start, end - start + 1);
-    };
-
-    string line;
-    while (getline(fin, line)) {
-        trim(line);
-        if (line.empty()) continue; // skip empty lines
-
-        vector<string> fields;
-        string temp;
-        stringstream ss(line);
-
-        // Split line by '|'
-        while (getline(ss, temp, '|')) {
-            trim(temp);
-            fields.push_back(temp);
-        }
-
-        if (fields.size() < 5) {
-            cout << "[WARN] Skipping malformed line: " << line << "\n";
-            continue;
-        }
-
-        string name = fields[0];
-        string userID = fields[1];
-        long long contact = 0;
-
-        try {
-            contact = stoll(fields[2]);
-        } catch (...) {
-            cout << "[WARN] Invalid contact in line: " << line << "\n";
-            continue;
-        }
-
-        string email = fields[3];
-
-        // Extract VehicleType number
-        int vTypeInt = -1;
-        size_t pos = fields[4].find(':');
-        if (pos != string::npos) {
-            try {
-                vTypeInt = stoi(fields[4].substr(pos + 1));
-            } catch (...) {
-                cout << "[WARN] Invalid vehicle type in line: " << line << "\n";
-                continue;
-            }
-        } else {
-            cout << "[WARN] Vehicle type missing in line: " << line << "\n";
-            continue;
-        }
-
-        // Check if user already exists
-        if (users.find(userID) != users.end()) {
-            cout << "[INFO] Duplicate UserID skipped: " << userID << "\n";
-            continue;
-        }
-
-        // Create correct derived object
-        switch (vTypeInt) {
-            case 0: users[userID] = new CycleUser(name, userID, contact, email); break;
-            case 1: users[userID] = new FCarUser(name, userID, contact, email); break;
-            case 2: users[userID] = new SCarUser(name, userID, contact, email); break;
-            case 3: users[userID] = new MotorcycleUser(name, userID, contact, email); break;
-            case 4: users[userID] = new EVUser(name, userID, contact, email); break;
-            case 5: users[userID] = new DisabledUser(name, userID, contact, email); break;
-            default:
-                cout << "[WARN] Unknown vehicle type in line: " << line << "\n";
-                continue;
-        }
-
-        cout << "[INFO] Loaded user: " << name << " (" << userID << ")\n";
-    }
-
-    fin.close();
+  string line;
+  while (getline(fin, line)) {
+    cout << "[INFO] Skipping load from file for now: " << line << "\n";
+  }
+  fin.close();
 }
-
-
 
 // ---------------- MENU ----------------
 int main() {
   unordered_map<string, user *> users;
-  loadUsers(users, "users.txt");  
-
   int choice = 0;
 
   do {
@@ -847,8 +745,7 @@ int main() {
           break;
         }
         user *u = it->second;
-        u->greet();
-        u->displayParkingMessage();
+
         int capacity = 100, occupied = 40;
         vehicleType type = getVehicleType(*u);
 
@@ -900,11 +797,8 @@ int main() {
               spotName = "Family";
               break;
           }
-          parkingSpot ps("dummy", tempSpot);
-          if (!ps.isVehicleCompatibleWithSpot(type, tempSpot)){
-            continue;
-          }
-          int previewRate = dynamicPrice::calRate(occupied, capacity, type,tempSpot, isChargingPreview);
+          int previewRate = dynamicPrice::calRate(occupied, capacity, type,
+                                                  tempSpot, isChargingPreview);
           cout << s << ". " << spotName << " Spot -> Rs " << previewRate
                << "\n";
         }
@@ -960,15 +854,14 @@ int main() {
         int finalRate = u->getDiscountedRate(rate);
         Payment::addRevenue(finalRate, type);
 
-        // ----- Payment -----
-        string payLine;
-        int payChoice;
         cout << "Choose Payment Method:\n1. Cash\n2. Card\n3. UPI\n4. "
                 "Netbanking\nEnter choice: ";
+        string payLine;
         getline(cin, payLine);
+        int payChoice;
         if (!parseIntInRange(payLine, payChoice, 1, 4)) {
-          cout << "Invalid choice! Defaulting to Cash.\n";
-          payChoice = 1;
+          Payment::pay(finalRate);
+          break;
         }
         switch (payChoice) {
           case 1:
@@ -979,10 +872,8 @@ int main() {
             long long cardnum;
             cin >> cardnum;
             string cardNum = to_string(cardnum);
-            if (cardNum.length() >= 13 && cardNum.length() <= 19){
+            if (cardNum.length() >= 13 && cardNum.length() <= 19)
               Payment::pay(finalRate, cardnum);
-              cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            }
             else
               cout << "Please Enter valid card number\n";
             break;
@@ -1004,26 +895,10 @@ int main() {
             long long acc;
             cin >> acc;
             Payment::pay(finalRate, acc, bankType);
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
             break;
           }
-          case 0: {
-            cout << "Exiting... Goodbye!\n";
-            choice = 5;
-            break;
-      }
-      }
-      // ----- Save Transaction -----
-      ofstream fout("transactions.txt", ios::app);
-      time_t now = time(0);
-      fout << "UserID: " << u->getID() << " | VehicleType: " << (int)type
-         << " | SpotType: " << (int)spot << " | Amount: Rs " << finalRate
-         << " | Time: " << ctime(&now);
-      fout.close();
-
-      // ----- Save Revenue -----
-      Payment::saveRevenueToFile("revenue.txt");
-      break;
+        }
+        break;
       }
 
       case 3:

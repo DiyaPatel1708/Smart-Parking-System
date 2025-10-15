@@ -1,0 +1,2 @@
+UserID: 30 | VehicleType: 2 | SpotType: 8 | Amount: Rs 15 | Time: Thu Oct 16 00:05:42 2025
+UserID: 30 | VehicleType: 2 | SpotType: 8 | Amount: Rs 15 | Time: Thu Oct 16 00:06:00 2025
