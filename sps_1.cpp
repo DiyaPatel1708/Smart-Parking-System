@@ -623,7 +623,7 @@ int Payment::totalEVRevenue = 0;
 void loadUsers(unordered_map<string, user *> &users, const string &filename) {
     ifstream fin(filename);
     if (!fin) {
-        cout << "No user file found. Starting fresh.\n";
+        cout << "[INFO] No user file found. Starting fresh.\n";
         return;
     }
 
