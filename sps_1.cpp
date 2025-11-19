@@ -13,6 +13,24 @@
 
 using namespace std;
 
+// Time structure for reservations
+struct ReservationTime {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+};
+
+// Time utility functions
+time_t convertToTimeT(const ReservationTime& rt);
+ReservationTime getCurrentTime();
+bool isValidDate(int day, int month, int year);
+bool isValidReservationTime(const ReservationTime& startTime, const ReservationTime& endTime);
+double calculateHoursBetween(const ReservationTime& start, const ReservationTime& end);
+void displayTime(const ReservationTime& rt);
+
 // Vehicle types supported by the system
 enum class VehicleCategory {
     BICYCLE,
@@ -45,7 +63,6 @@ enum class ParkingSpotCategory {
     DISABLED_SPOT
 };
 
-// Forward declarations
 class ParkingSpot;
 class ParkingLayoutManager;
 
@@ -105,6 +122,141 @@ bool isEmailValid(const string& email) {
     return true;
 }
 
+time_t convertToTimeT(const ReservationTime& rt) {
+    struct tm timeinfo = {0};
+    timeinfo.tm_year = rt.year - 1900;
+    timeinfo.tm_mon = rt.month - 1;
+    timeinfo.tm_mday = rt.day;
+    timeinfo.tm_hour = rt.hour;
+    timeinfo.tm_min = rt.minute;
+    timeinfo.tm_sec = rt.second;
+    timeinfo.tm_isdst = -1;
+    return mktime(&timeinfo);
+}
+
+ReservationTime getCurrentTime() {
+    time_t now = time(0);
+    tm* localTime = localtime(&now);
+    ReservationTime current;
+    current.year = localTime->tm_year + 1900;
+    current.month = localTime->tm_mon + 1;
+    current.day = localTime->tm_mday;
+    current.hour = localTime->tm_hour;
+    current.minute = localTime->tm_min;
+    current.second = localTime->tm_sec;
+    return current;
+}
+
+bool isValidDate(int day, int month, int year) {
+    if (year < 2024) return false;  
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    
+    if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30)
+        return false;
+    
+    if (month == 2) {
+        bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if (isLeapYear && day > 29) return false;
+        if (!isLeapYear && day > 28) return false;
+    }
+    
+    return true;  
+}
+
+bool isValidReservationTime(const ReservationTime& startTime, const ReservationTime& endTime) {
+    time_t start = convertToTimeT(startTime);
+    time_t end = convertToTimeT(endTime);
+    time_t now = time(0);
+    
+    ReservationTime current = getCurrentTime();
+    
+    if (start >= end) {
+        cout << "Error: End time must be after start time!\n";
+        return false;
+    }
+    
+    if (start < now) {
+        cout << "Error: Start time cannot be in the past!\n";
+        cout << "Current time: ";
+        displayTime(current);
+        cout << "\n";
+        return false;
+    }
+    
+    // Check duration limits (1 hour to 5 days = 120 hours)
+    double durationHours = calculateHoursBetween(startTime, endTime);
+    if (durationHours < 1.0) {
+        cout << "Error: Minimum reservation duration is 1 hour!\n";
+        return false;
+    }
+    if (durationHours > 120.0) { // 5 days * 24 hours = 120 hours
+        cout << "Error: Maximum reservation duration is 5 days!\n";
+        return false;
+    }
+    
+    return true;
+}
+
+double calculateHoursBetween(const ReservationTime& start, const ReservationTime& end) {
+    time_t startTime = convertToTimeT(start);
+    time_t endTime = convertToTimeT(end);
+    return difftime(endTime, startTime) / 3600.0;
+}
+
+void displayTime(const ReservationTime& rt) {
+    cout << setw(2) << setfill('0') << rt.day << "/" 
+         << setw(2) << setfill('0') << rt.month << "/" 
+         << rt.year << " " 
+         << setw(2) << setfill('0') << rt.hour << ":" 
+         << setw(2) << setfill('0') << rt.minute << ":"
+         << setw(2) << setfill('0') << rt.second;
+}
+
+// Helper function to parse date in dd/mm/yyyy format
+bool parseDate(const string& dateStr, int& day, int& month, int& year) {
+    if (dateStr.length() != 10 || dateStr[2] != '/' || dateStr[5] != '/') {
+        return false;
+    }
+    
+    try {
+        day = stoi(dateStr.substr(0, 2));
+        month = stoi(dateStr.substr(3, 2));
+        year = stoi(dateStr.substr(6, 4));
+        
+        // Basic date validation
+        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2024) {
+            return false;
+        }
+        
+        // Advanced date validation
+        return isValidDate(day, month, year);
+    } catch (...) {
+        return false;
+    }
+}
+
+// Helper function to parse time in hh:mm:ss format
+bool parseTime(const string& timeStr, int& hour, int& minute, int& second) {
+    if (timeStr.length() != 8 || timeStr[2] != ':' || timeStr[5] != ':') {
+        return false;
+    }
+    
+    try {
+        hour = stoi(timeStr.substr(0, 2));
+        minute = stoi(timeStr.substr(3, 2));
+        second = stoi(timeStr.substr(6, 2));
+        
+        // Basic time validation
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+            return false;
+        }
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 // File handling class for data persistence
 class DataStorage {
 private:
@@ -119,7 +271,9 @@ public:
      static void storeUserData(const string &userName, const string &userId, const string &userPassword,
                               long long userContact, const string &userEmail, VehicleCategory userVehicle, 
                               int userRating, const string &userFeedback, const string &securityQuestion = "", 
-                              const string &securityAnswer = "") {
+                              const string &securityAnswer = "", bool isParked = false, const string &spotId = "",
+                              int hourlyRate = 0, const ReservationTime& startTime = ReservationTime{0}, 
+                              const ReservationTime& endTime = ReservationTime{0}) {
         ofstream outputFile(USER_DATA_FILE, ios::app);
         if (outputFile.is_open()) {
             time_t currentTime = time(0);
@@ -140,9 +294,21 @@ public:
                 outputFile << "|SecurityA:" << securityAnswer;
             }
             
+            // Add parking status if user is parked
+            if (isParked && !spotId.empty()) {
+                outputFile << "|Parked:true";
+                outputFile << "|Spot:" << spotId;
+                outputFile << "|HourlyRate:" << hourlyRate;
+                outputFile << "|StartTime:" << startTime.year << "-" << startTime.month << "-" << startTime.day 
+                          << "_" << startTime.hour << ":" << startTime.minute << ":" << startTime.second;
+                outputFile << "|EndTime:" << endTime.year << "-" << endTime.month << "-" << endTime.day 
+                          << "_" << endTime.hour << ":" << endTime.minute << ":" << endTime.second;
+            } else {
+                outputFile << "|Parked:false";
+            }
+            
             outputFile << "\n";
             outputFile.close();
-            cout << "User data saved to file with security questions.\n";
         } else {
             cout << "Error: Could not open user data file for writing!\n";
         }
@@ -202,7 +368,7 @@ static bool updateUserPasswordInFile(const string &userId, const string &newPass
 
     // Only show message once, not for every duplicate
     if (updateCount > 0) {
-        cout << "Password updated in file for user: " << userId << "\n";
+        cout << "Password updated \n";
     }
 
     // Rewrite file with updated password
@@ -218,6 +384,89 @@ static bool updateUserPasswordInFile(const string &userId, const string &newPass
         return false;
     }
 }
+
+    // Update user parking status in file
+    static bool updateUserParkingStatusInFile(const string &userId, bool isParked, const string &spotId = "", 
+                                             int hourlyRate = 0, const ReservationTime& startTime = ReservationTime{0}, 
+                                             const ReservationTime& endTime = ReservationTime{0}) {
+        ifstream inputFile(USER_DATA_FILE);
+        if (!inputFile) {
+            cout << "No user records found!\n";
+            return false;
+        }
+
+        vector<string> allLines;
+        string dataLine;
+        bool userFound = false;
+
+        while (getline(inputFile, dataLine)) {
+            size_t userPos = dataLine.find("|" + userId + "|");
+            if (userPos != string::npos) {
+                // Found the user - update parking status
+                vector<string> fields;
+                stringstream ss(dataLine);
+                string field;
+                
+                while (getline(ss, field, '|')) {
+                    fields.push_back(field);
+                }
+                
+                // Remove existing parking status if any
+                vector<string> cleanFields;
+                for (const string &f : fields) {
+                    if (f.find("Parked:") != 0 && f.find("Spot:") != 0 && 
+                        f.find("HourlyRate:") != 0 && f.find("StartTime:") != 0 && f.find("EndTime:") != 0) {
+                        cleanFields.push_back(f);
+                    }
+                }
+                
+                // Add new parking status
+                if (isParked) {
+                    cleanFields.push_back("Parked:true");
+                    cleanFields.push_back("Spot:" + spotId);
+                    cleanFields.push_back("HourlyRate:" + to_string(hourlyRate));
+                    cleanFields.push_back("StartTime:" + to_string(startTime.year) + "-" + to_string(startTime.month) + "-" + to_string(startTime.day) + 
+                                         "_" + to_string(startTime.hour) + ":" + to_string(startTime.minute) + ":" + to_string(startTime.second));
+                    cleanFields.push_back("EndTime:" + to_string(endTime.year) + "-" + to_string(endTime.month) + "-" + to_string(endTime.day) + 
+                                        "_" + to_string(endTime.hour) + ":" + to_string(endTime.minute) + ":" + to_string(endTime.second));
+                } else {
+                    cleanFields.push_back("Parked:false");
+                }
+                
+                // Reconstruct the line
+                string updatedLine;
+                for (size_t i = 0; i < cleanFields.size(); i++) {
+                    updatedLine += cleanFields[i];
+                    if (i < cleanFields.size() - 1) updatedLine += "|";
+                }
+                allLines.push_back(updatedLine);
+                userFound = true;
+            } else {
+                allLines.push_back(dataLine);
+            }
+        }
+        inputFile.close();
+
+        if (!userFound) {
+            cout << "User ID not found in records!\n";
+            return false;
+        }
+
+        // Rewrite file with updated parking status
+        ofstream outputFile(USER_DATA_FILE);
+        if (outputFile.is_open()) {
+            for (const string &line : allLines) {
+                outputFile << line << "\n";
+            }
+            outputFile.close();
+            cout << "Parking status updated \n";
+            return true;
+        } else {
+            cout << "Error updating user records!\n";
+            return false;
+        }
+    }
+
     // Read user data silently during startup
     static void loadUserDataSilently() {
     ifstream inputFile(USER_DATA_FILE);
@@ -236,7 +485,8 @@ static bool updateUserPasswordInFile(const string &userId, const string &newPass
 
     // Save transaction details
     static void recordTransaction(const string &userId, VehicleCategory vehicleType, ParkingSpotCategory spotCategory,
-                               const string &spotIdentifier, int timeDuration, int paymentAmount, const string &paymentType) {
+                               const string &spotIdentifier, int timeDuration, int paymentAmount, const string &paymentType,
+                               const ReservationTime& startTime, const ReservationTime& endTime) {
         ofstream outputFile(TRANSACTION_LOG_FILE, ios::app);
         if (outputFile.is_open()) {
             time_t currentTime = time(0);
@@ -245,11 +495,24 @@ static bool updateUserPasswordInFile(const string &userId, const string &newPass
                  << "|Vehicle:" << static_cast<int>(vehicleType)
                  << "|SpotType:" << static_cast<int>(spotCategory)
                  << "|Spot:" << spotIdentifier
-                 << "|Hours:" << timeDuration << " hours"
+                 << "|Start:";
+            displayTimeToFile(outputFile, startTime);
+            outputFile << "|End:";
+            displayTimeToFile(outputFile, endTime);
+            outputFile << "|Hours:" << timeDuration << " hours"
                  << "|Payment:Rs " << paymentAmount
                  << "|Method:" << paymentType << "\n\n";
             outputFile.close();
         }
+    }
+
+    static void displayTimeToFile(ofstream& file, const ReservationTime& rt) {
+        file << setw(2) << setfill('0') << rt.day << "/" 
+             << setw(2) << setfill('0') << rt.month << "/" 
+             << rt.year << " " 
+             << setw(2) << setfill('0') << rt.hour << ":" 
+             << setw(2) << setfill('0') << rt.minute << ":"
+             << setw(2) << setfill('0') << rt.second;
     }
 
     // Load transactions silently
@@ -610,6 +873,92 @@ static bool updateUserPasswordInFile(const string &userId, const string &newPass
         inputFile.close();
         return make_pair("", "");
     }
+
+    // Get user parking status from file
+    static bool getUserParkingStatusFromFile(const string &userId, string &spotId, int &hourlyRate, ReservationTime &startTime, ReservationTime &endTime) {
+        ifstream inputFile(USER_DATA_FILE);
+        if (!inputFile) {
+            return false;
+        }
+
+        string dataLine;
+        while (getline(inputFile, dataLine)) {
+            size_t userPos = dataLine.find("|" + userId + "|");
+            if (userPos != string::npos) {
+                // Found the user line
+                vector<string> fields;
+                stringstream ss(dataLine);
+                string field;
+                
+                while (getline(ss, field, '|')) {
+                    fields.push_back(field);
+                }
+                
+                bool isParked = false;
+                spotId = "";
+                hourlyRate = 0;
+                string startTimeStr, endTimeStr;
+                
+                for (const string &f : fields) {
+                    if (f.find("Parked:") == 0) {
+                        isParked = (f.substr(7) == "true");
+                    } else if (f.find("Spot:") == 0) {
+                        spotId = f.substr(5);
+                    } else if (f.find("HourlyRate:") == 0) {
+                        hourlyRate = stoi(f.substr(11));
+                    } else if (f.find("StartTime:") == 0) {
+                        startTimeStr = f.substr(10);
+                    } else if (f.find("EndTime:") == 0) {
+                        endTimeStr = f.substr(8);
+                    }
+                }
+                
+                if (isParked && !spotId.empty() && !startTimeStr.empty() && !endTimeStr.empty()) {
+                    // Parse start time
+                    size_t pos1 = startTimeStr.find('-');
+                    size_t pos2 = startTimeStr.find('-', pos1 + 1);
+                    size_t pos3 = startTimeStr.find('_', pos2 + 1);
+                    size_t pos4 = startTimeStr.find(':', pos3 + 1);
+                    size_t pos5 = startTimeStr.find(':', pos4 + 1);
+                    
+                    if (pos1 != string::npos && pos2 != string::npos && pos3 != string::npos && 
+                        pos4 != string::npos && pos5 != string::npos) {
+                        startTime.year = stoi(startTimeStr.substr(0, pos1));
+                        startTime.month = stoi(startTimeStr.substr(pos1 + 1, pos2 - pos1 - 1));
+                        startTime.day = stoi(startTimeStr.substr(pos2 + 1, pos3 - pos2 - 1));
+                        startTime.hour = stoi(startTimeStr.substr(pos3 + 1, pos4 - pos3 - 1));
+                        startTime.minute = stoi(startTimeStr.substr(pos4 + 1, pos5 - pos4 - 1));
+                        startTime.second = stoi(startTimeStr.substr(pos5 + 1));
+                    }
+                    
+                    // Parse end time
+                    pos1 = endTimeStr.find('-');
+                    pos2 = endTimeStr.find('-', pos1 + 1);
+                    pos3 = endTimeStr.find('_', pos2 + 1);
+                    pos4 = endTimeStr.find(':', pos3 + 1);
+                    pos5 = endTimeStr.find(':', pos4 + 1);
+                    
+                    if (pos1 != string::npos && pos2 != string::npos && pos3 != string::npos && 
+                        pos4 != string::npos && pos5 != string::npos) {
+                        endTime.year = stoi(endTimeStr.substr(0, pos1));
+                        endTime.month = stoi(endTimeStr.substr(pos1 + 1, pos2 - pos1 - 1));
+                        endTime.day = stoi(endTimeStr.substr(pos2 + 1, pos3 - pos2 - 1));
+                        endTime.hour = stoi(endTimeStr.substr(pos3 + 1, pos4 - pos3 - 1));
+                        endTime.minute = stoi(endTimeStr.substr(pos4 + 1, pos5 - pos4 - 1));
+                        endTime.second = stoi(endTimeStr.substr(pos5 + 1));
+                    }
+                    
+                    inputFile.close();
+                    return true;
+                }
+                
+                inputFile.close();
+                return false;
+            }
+        }
+        inputFile.close();
+        return false;
+    }
 };
 
 // Initialize file paths
@@ -628,6 +977,8 @@ class ParkingSpot {
   time_t reservationTimestamp;
   int reservationLength;
   string occupiedByUserId;
+  ReservationTime reservationStartTime;
+  ReservationTime reservationEndTime;
 
  public:
   ParkingSpot(const string &id, ParkingSpotCategory category) {
@@ -637,6 +988,8 @@ class ParkingSpot {
     reservationTimestamp = 0;
     reservationLength = 0;
     occupiedByUserId = "";
+    reservationStartTime = {0};
+    reservationEndTime = {0};
   }
 
   string getSpotId() const { return spotIdentifier; }
@@ -644,6 +997,9 @@ class ParkingSpot {
   ParkingSpotCategory getSpotCategory() const { return spotCategory; }
   string getOccupantId() const { return occupiedByUserId; }
   time_t getReservationTimestamp() const { return reservationTimestamp; }
+  pair<ReservationTime, ReservationTime> getReservationTimes() const {
+        return make_pair(reservationStartTime, reservationEndTime);
+  }
   
   void setCurrentStatus(SpotState status) { currentStatus = status; }
   void setOccupantId(const string& occupant) { occupiedByUserId = occupant; }
@@ -682,17 +1038,24 @@ class ParkingSpot {
     }
   }
   
-  // Reserve spot for parking
-  bool reserveSpot(VehicleCategory vehicle, int durationHours = 1) {
+  // Reserve spot for parking with specific times
+  bool reserveSpot(VehicleCategory vehicle, const ReservationTime& startTime, 
+                  const ReservationTime& endTime, int durationHours = 1) {
     if (currentStatus != SpotState::AVAILABLE) {
       cout << "Spot " << spotIdentifier << " is not available!\n";
       return false;
     }
     
+    if (!isValidReservationTime(startTime, endTime)) {
+        return false;
+    }
+    
+    double actualHours = calculateHoursBetween(startTime, endTime);
+    
     // Family spots require minimum 8-hour booking
-    if (spotCategory == ParkingSpotCategory::FAMILY_SPOT && durationHours < 8) {
+    if (spotCategory == ParkingSpotCategory::FAMILY_SPOT && actualHours < 8) {
       cout << "Family spots require minimum 8-hour booking!\n";
-      cout << "You requested " << durationHours << " hours. Please book for 8+ hours.\n";
+      cout << "You requested " << actualHours << " hours. Please book for 8+ hours.\n";
       return false;
     }
     
@@ -718,16 +1081,32 @@ class ParkingSpot {
     currentStatus = SpotState::BOOKED;
     reservationTimestamp = time(0);
     reservationLength = durationHours;
-    cout << "Spot " << spotIdentifier << " reserved successfully";
+    reservationStartTime = startTime;
+    reservationEndTime = endTime;
+    
+    cout << "Spot " << spotIdentifier << " reserved successfully from ";
+    displayTime(startTime);
+    cout << " to ";
+    displayTime(endTime);
+    cout << " (" << fixed << setprecision(1) << actualHours << " hours)";
     
     if (spotCategory == ParkingSpotCategory::FAMILY_SPOT) {
-      cout << " (Family spot - " << durationHours << " hour booking)";
-    } else {
-      cout << " for " << durationHours << " hours";
+      cout << " (Family spot)";
     }
     cout << ".\n";
     
     return true;
+  }
+  
+  // Check if spot is reserved for a specific time
+  bool isReservedForTime(const ReservationTime& checkTime) {
+    if (currentStatus != SpotState::BOOKED) return false;
+    
+    time_t check = convertToTimeT(checkTime);
+    time_t start = convertToTimeT(reservationStartTime);
+    time_t end = convertToTimeT(reservationEndTime);
+    
+    return (check >= start) && (check <= end);
   }
   
   // Occupy the spot
@@ -747,6 +1126,8 @@ class ParkingSpot {
     reservationTimestamp = 0;
     reservationLength = 0;
     occupiedByUserId = "";
+    reservationStartTime = {0};
+    reservationEndTime = {0};
     cout << "Spot " << spotIdentifier << " is now available.\n";
     return true;
   }
@@ -820,67 +1201,53 @@ public:
     
     // Determine spot type based on position
     ParkingSpotCategory determineSpotType(int row, int col) {
-        // Elevator locations at columns 1, 6, 11 (0-indexed: 1, 6, 11)
-        vector<int> elevatorColumns = {1, 6, 11};
-        
-        // Premium spots near elevators (first 2 rows)
-        for (int elevatorCol : elevatorColumns) {
-            if (abs(col - elevatorCol) <= 1 && row < 2) {
-                return ParkingSpotCategory::PREMIUM_SPOT;
-            }
+    vector<int> elevatorColumns = {1, 6, 11};
+    
+    // ROW 0-1: Premium, Disabled, Regular
+    if (row < 2) {
+        // Columns for DISABLED spots: 2,3,7,8 (0-indexed) = Col 3-4, 8-9 in display
+        if (col == 2 || col == 3 || col == 7 || col == 8) {
+            return ParkingSpotCategory::DISABLED_SPOT;
         }
-        
-        // Disabled spots near elevators (first 3 rows)
-        for (int elevatorCol : elevatorColumns) {
-            if (abs(col - elevatorCol) <= 2 && row < 3) {
-                return ParkingSpotCategory::DISABLED_SPOT;
-            }
-        }
-        
-        // EV charging near elevators (rows 2-3)
-        for (int elevatorCol : elevatorColumns) {
-            if (abs(col - elevatorCol) <= 1 && row >= 2 && row < 4) {
-                return ParkingSpotCategory::EV_CHARGING_SPOT;
-            }
-        }
-        
-        // Family spots in central area
-        if (row >= 3 && row <= 5 && col >= 4 && col <= 8) {
-            return ParkingSpotCategory::FAMILY_SPOT;
-        }
-        
-        // Large spots for 7-seaters
-        if (row >= 4 && col >= 2 && col <= 10) {
-            return ParkingSpotCategory::LARGE_SPOT;
-        }
-        
-        // Small spots for 5-seaters
-        if (row >= 5 && col >= 1 && col <= 11) {
-            return ParkingSpotCategory::SMALL_SPOT;
-        }
-        
-        // Motorcycle spots at edges
-        if (row >= 5 && (col <= 2 || col >= 10)) {
-            return ParkingSpotCategory::MOTORCYCLE_SPOT;
-        }
-        
-        // Bicycle spots
-        if (row >= 5 && col >= 3 && col <= 9) {
-            return ParkingSpotCategory::BICYCLE_SPOT;
-        }
-        
-        // Compact spots
-        if (row >= 4 && (col <= 1 || col >= 11)) {
-            return ParkingSpotCategory::COMPACT_SPOT;
-        }
-        
-        // Regular spots for remaining areas
-        if (row >= 2 && row <= 4) {
+        // Columns for REGULAR spots: 4,5,9,10 (0-indexed) = Col 5-6, 10-11 in display  
+        if (col == 4 || col == 5 || col == 9 || col == 10) {
             return ParkingSpotCategory::REGULAR_SPOT;
         }
-        
-        return ParkingSpotCategory::REGULAR_SPOT;
+        // Everything else is PREMIUM (around elevators)
+        return ParkingSpotCategory::PREMIUM_SPOT;
     }
+    
+    // ROW 2-3: EV, Disabled, Regular
+    if (row >= 2 && row < 4) {
+        // Columns for DISABLED spots: 2,3,7,8 (0-indexed)
+        if (col == 2 || col == 3 || col == 7 || col == 8) {
+            return ParkingSpotCategory::DISABLED_SPOT;
+        }
+        // Columns for REGULAR spots: 4,5,9,10 (0-indexed)
+        if (col == 4 || col == 5 || col == 9 || col == 10) {
+            return ParkingSpotCategory::REGULAR_SPOT;
+        }
+        // Everything else is EV CHARGING (around elevators)
+        return ParkingSpotCategory::EV_CHARGING_SPOT;
+    }
+    
+    // ROW 4: Compact, Large, Family
+    if (row == 4) {
+        if (col == 0 || col == 11) return ParkingSpotCategory::COMPACT_SPOT;
+        if (col >= 4 && col <= 7) return ParkingSpotCategory::FAMILY_SPOT;
+        return ParkingSpotCategory::LARGE_SPOT;
+    }
+    
+    // ROW 5: Motorcycle, Bicycle, Small, Family
+    if (row == 5) {
+        if (col == 0 || col == 11) return ParkingSpotCategory::MOTORCYCLE_SPOT;
+        if (col == 1 || col == 10) return ParkingSpotCategory::BICYCLE_SPOT;
+        if (col >= 4 && col <= 7) return ParkingSpotCategory::FAMILY_SPOT;
+        return ParkingSpotCategory::SMALL_SPOT;
+    }
+    
+    return ParkingSpotCategory::REGULAR_SPOT;
+}
     
     string generateSpotId(int row, int col) {
         char rowChar = 'A' + row;
@@ -944,7 +1311,7 @@ public:
             if (row < GRID_ROWS - 1) {
                 cout << "        ";
                 for (int col = 0; col < GRID_COLUMNS; col += 2) {
-                    if (col == 1 || col == 6 || col == 11) {
+                    if (col == 0 || col == 6 || col == 10) {
                         cout << "   +--+        ";
                     } else {
                         cout << "--------------";
@@ -1065,11 +1432,14 @@ public:
     vector<vector<ParkingSpot*>>& getParkingGrid() { return parkingGrid; }
     unordered_map<string, ParkingSpot*>& getSpotDirectory() { return spotDirectory; }
     
-    bool reserveParkingSpot(const string& spotId, VehicleCategory vehicle, int durationHours = 1) {
+    // Reserve parking spot with specific times
+    bool reserveParkingSpot(const string& spotId, VehicleCategory vehicle, 
+                           const ReservationTime& startTime, const ReservationTime& endTime, 
+                           int durationHours = 1) {
         ParkingSpot* spot = findSpotById(spotId);
         if (!spot) {
             cout << "Spot '" << spotId << "' not found!\n";
-            cout << "Valid spots: A1, B2, C3, etc.\n";
+            cout << "Enter Valid Spot ID.\n";
             return false;
         }
         
@@ -1100,7 +1470,21 @@ public:
             return false;
         }
         
-        return spot->reserveSpot(vehicle, durationHours);
+        return spot->reserveSpot(vehicle, startTime, endTime, durationHours);
+    }
+    
+    // Find available spots for specific time period
+    vector<string> findAvailableSpotsForTime(VehicleCategory vehicle, const ReservationTime& startTime, const ReservationTime& endTime) {
+        vector<string> availableList;
+        for (const auto& spotPair : spotDirectory) {
+            ParkingSpot* spot = spotPair.second;
+            if (spot->getCurrentStatus() == SpotState::AVAILABLE && 
+                spot->canVehicleParkHere(vehicle, spot->getSpotCategory()) &&
+                !spot->isReservedForTime(startTime) && !spot->isReservedForTime(endTime)) {
+                availableList.push_back(spotPair.first);
+            }
+        }
+        return availableList;
     }
     
     bool occupyParkingSpot(const string& spotId, const string& userId) {
@@ -1133,7 +1517,7 @@ public:
         ParkingSpot* spot = findSpotById(spotId);
         if (!spot) {
             cout << "Spot '" << spotId << "' not found!\n";
-            cout << "Valid spots: A1, B2, C3, etc.\n";
+            cout << "Enter Valid Spot ID.\n";
             return false;
         }
         
@@ -1157,7 +1541,7 @@ public:
         ParkingSpot* spot = findSpotById(spotId);
         if (!spot) {
             cout << "Spot '" << spotId << "' not found!\n";
-            cout << "Valid spots: A1, B2, C3, etc.\n";
+            cout << "Enter Valid Spot ID.\n";
             return false;
         }
         
@@ -1172,7 +1556,7 @@ public:
         ParkingSpot* spot = findSpotById(spotId);
         if (!spot) {
             cout << "Spot '" << spotId << "' not found!\n";
-            cout << "Valid spots: A1, B2, C3, etc.\n";
+            cout << "Enter Valid Spot ID.\n";
             return false;
         }
         
@@ -1268,7 +1652,7 @@ void DataStorage::saveSpotStates(ParkingLayoutManager& layoutManager) {
     if (outputFile.is_open()) {
         time_t currentTime = time(0);  // FIX: Store time in variable first
         outputFile << "\n=== SPOT STATES SNAPSHOT ===\n";
-        outputFile << "Timestamp: " << ctime(&currentTime);  // FIX: Use variable
+        outputFile << "Timestamp: " << ctime(&currentTime);  
         outputFile << "Format: SpotID|Status|Occupant|ReservationTime\n";
         
         auto& spotDirectory = layoutManager.getSpotDirectory();
@@ -1593,6 +1977,8 @@ class ParkingSystemUser {
   int bookedHours;
   string securityQuestion;
   string securityAnswer;
+  ReservationTime parkingStartTimeStruct;
+  ReservationTime parkingEndTimeStruct;
 
  public:
   ParkingSystemUser(string name, string id, string password, long long contact, VehicleCategory vehicleType,
@@ -1616,6 +2002,8 @@ class ParkingSystemUser {
     totalUserCount++;
     parkingStartTime = 0;
     parkingEndTime = 0;
+    parkingStartTimeStruct = {0};
+    parkingEndTimeStruct = {0};
   }
 
   virtual void welcomeUser() const {
@@ -1623,7 +2011,7 @@ class ParkingSystemUser {
   }
   
   virtual void showParkingTip() const {
-    cout << fullName << ", please select your parking spot carefully.\n";
+    cout << fullName << ", Please select your parking spot carefully.\n";
   }
 
   virtual ~ParkingSystemUser() {}
@@ -1743,10 +2131,10 @@ class ParkingSystemUser {
         
         // Update in file
         if (DataStorage::updateUserPasswordInFile(userId, newPass)) {
-            cout << "✓ Password reset successfully!\n";
+            cout << "Password reset successfully!\n";
             return true;
         } else {
-            cout << "✗ Password reset failed!\n";
+            cout << "Password reset failed!\n";
             return false;
         }
     }
@@ -1774,7 +2162,7 @@ class ParkingSystemUser {
     
     // Update in file - FIXED: use newPass instead of newPassword
     if (DataStorage::updateUserPasswordInFile(userId, newPass)) {
-        cout << "Password updated successfully and saved to file!\n";
+        cout << "Password updated successfully!\n";
     } else {
         cout << "Password updated in memory but failed to save to file!\n";
     }
@@ -1792,10 +2180,10 @@ class ParkingSystemUser {
             getline(cin, answer);
             
             if (answer == securityAnswer) {
-                cout << "✓ Security answer correct!\n";
+                cout << "Security answer correct!\n";
                 return changePasswordFlow();
             } else {
-                cout << "✗ Incorrect security answer!\n";
+                cout << "Incorrect security answer!\n";
                 return false;
             }
         }
@@ -1807,7 +2195,7 @@ class ParkingSystemUser {
         cout << "DEBUG: Retrieved Q: '" << qa.first << "' A: '" << qa.second << "'\n";
         
         if (qa.first.empty() || qa.second.empty()) {
-            cout << "✗ No security question found for user: " << userId << "\n";
+            cout << "No security question found for user: " << userId << "\n";
             cout << "Please register security questions in User Settings.\n";
             return false;
         }
@@ -1818,10 +2206,10 @@ class ParkingSystemUser {
         getline(cin, answer);
         
         if (answer == qa.second) {
-            cout << "✓ Security answer correct!\n";
+            cout << "Security answer correct!\n";
             return changePasswordFlow();
         } else {
-            cout << "✗ Incorrect security answer!\n";
+            cout << "Incorrect security answer!\n";
             return false;
         }
     }
@@ -1837,10 +2225,10 @@ class ParkingSystemUser {
     cout << "\n=== ACCOUNT DELETION CONFIRMATION ===\n";
     cout << "User: " << fullName << " (ID: " << userId << ")\n";
     cout << "This action will:\n";
-    cout << "• Permanently delete your profile\n";
-    cout << "• Remove all your transaction history\n";
-    cout << "• Delete your loyalty points and ratings\n";
-    cout << "• This action cannot be undone!\n\n";
+    cout << "~ Permanently delete your profile\n";
+    cout << "~ Remove all your transaction history\n";
+    cout << "~ Delete your loyalty points and ratings\n";
+    cout << "~ This action cannot be undone!\n\n";
 
     cout << "Type 'DELETE' to confirm: ";
     string confirmation;
@@ -1886,23 +2274,37 @@ class ParkingSystemUser {
   int getBookedHours() const { return bookedHours; }
   string getSecurityQuestion() const { return securityQuestion; }
   string getSecurityAnswer() const { return securityAnswer; }
+  ReservationTime getParkingStartTimeStruct() const { return parkingStartTimeStruct; }
+  ReservationTime getParkingEndTimeStruct() const { return parkingEndTimeStruct; }
 
-  void setParkingStatus(bool parked, const string& spotId = "", int hourlyRate = 0, int duration = 0) {
+  void setParkingStatus(bool parked, const string& spotId = "", int hourlyRate = 0, 
+                       const ReservationTime& startTime = ReservationTime{0}, 
+                       const ReservationTime& endTime = ReservationTime{0}) {
     currentlyParked = parked;
     if (parked) {
         currentSpotId = spotId;
-        parkingStartTime = time(NULL);
+        parkingStartTimeStruct = startTime;
+        parkingEndTimeStruct = endTime;
+        parkingStartTime = convertToTimeT(startTime);
         bookedHourlyRate = hourlyRate;
-        bookedHours = duration;
+        bookedHours = static_cast<int>(calculateHoursBetween(startTime, endTime));
+        
+        // Save parking status to file WITH HOURLY RATE
+        DataStorage::updateUserParkingStatusInFile(userId, true, spotId, hourlyRate, startTime, endTime);
     } else {
         currentSpotId = "";
         bookedHourlyRate = 0;
         bookedHours = 0;
+        parkingStartTimeStruct = {0};
+        parkingEndTimeStruct = {0};
+        
+        // Save parking status to file
+        DataStorage::updateUserParkingStatusInFile(userId, false);
     }
   }
 
   void saveUserData() const {
-    DataStorage::storeUserData(fullName, userId, userPassword, contactNumber, emailAddress, userVehicleType, userRating, userFeedback, securityQuestion, securityAnswer);
+    DataStorage::storeUserData(fullName, userId, userPassword, contactNumber, emailAddress, userVehicleType, userRating, userFeedback, securityQuestion, securityAnswer, currentlyParked, currentSpotId, bookedHourlyRate, parkingStartTimeStruct, parkingEndTimeStruct);
   }
 
   static void loadUserDataFromFile() {
@@ -1943,7 +2345,7 @@ class ParkingSystemUser {
     cout << "Feedback recorded!\n";
   }
 
-  int calculateParkingFee() {
+  int calculateParkingFee(const ReservationTime& actualEndTime) {
     if (!currentlyParked) {
         cout << "User is not currently parked!\n";
         return 0;
@@ -1954,27 +2356,37 @@ class ParkingSystemUser {
         return 0;
     }
     
-    parkingEndTime = time(NULL);
-    double actualHours = difftime(parkingEndTime, parkingStartTime) / 3600.0;
+    double bookedHoursValue = calculateHoursBetween(parkingStartTimeStruct, parkingEndTimeStruct);
+    double actualHours = calculateHoursBetween(parkingStartTimeStruct, actualEndTime);
     
-    int baseAmount = bookedHourlyRate * bookedHours;
+    int baseAmount = static_cast<int>(bookedHourlyRate * bookedHoursValue);
     
     int lateFee = 0;
-    if (actualHours > bookedHours) {
-        int extraHours = static_cast<int>(ceil(actualHours - bookedHours));
-        lateFee = extraHours * (bookedHourlyRate * 2);
+    double extraHours = 0.0;
+    if (actualHours > bookedHoursValue) {
+        extraHours = actualHours - bookedHoursValue;
+        // Calculate late fee based on actual extra hours, not rounded up
+        int normalLateFee = static_cast<int>(extraHours * (bookedHourlyRate * 2));
+        // THEN DOUBLE the late fee as penalty
+        lateFee = normalLateFee * 2;
+        cout << "Late return detected! Extra hours: " << fixed << setprecision(2) << extraHours << "\n";
+        cout << "LATE FEE PENALTY APPLIED! \n";
     }
     
     int totalAmount = baseAmount + lateFee;
     
     cout << "\n=== PARKING FEE CALCULATION ===\n";
-    cout << "Booked Hours: " << bookedHours << " hours\n";
+    cout << "Reserved From: "; displayTime(parkingStartTimeStruct); cout << "\n";
+    cout << "Reserved Until: "; displayTime(parkingEndTimeStruct); cout << "\n";
+    cout << "Actual Return: "; displayTime(actualEndTime); cout << "\n";
+    cout << "Booked Hours: " << fixed << setprecision(2) << bookedHoursValue << " hours\n";
     cout << "Actual Hours: " << fixed << setprecision(2) << actualHours << " hours\n";
     cout << "Hourly Rate: Rs " << bookedHourlyRate << "\n";
-    cout << "Base Amount: Rs " << baseAmount << " (" << bookedHours << " hours × Rs " << bookedHourlyRate << ")\n";
+    cout << "Base Amount: Rs " << baseAmount << " (" << bookedHoursValue << " hours × Rs " << bookedHourlyRate << ")\n";
     
     if (lateFee > 0) {
-        cout << "Late Fee: Rs " << lateFee << " (" << (actualHours - bookedHours) << " extra hours)\n";
+        int normalLateFee = lateFee / 2; // Show what the normal late fee would have been
+        cout << "Late Fee Penalty: Rs " << lateFee << " (" << fixed << setprecision(2) << extraHours << " extra hours × Rs " << (bookedHourlyRate * 2) << ")\n";
         cout << "TOTAL: Rs " << totalAmount << "\n";
     } else {
         cout << "Late Fee: Rs 0 (No overtime)\n";
@@ -1983,9 +2395,10 @@ class ParkingSystemUser {
     cout << "===============================\n";
     
     return totalAmount;
-  }
-
-  void processParkingPayment(int amount, VehicleCategory vehicle, ParkingSpotCategory spotType, const string& spotId, int duration) {
+}
+  
+  void processParkingPayment(int amount, VehicleCategory vehicle, ParkingSpotCategory spotType, const string& spotId, int duration,
+                           const ReservationTime& startTime, const ReservationTime& endTime) {
     string paymentInput;
     int paymentMethod;
     string methodUsed;
@@ -2039,7 +2452,7 @@ class ParkingSystemUser {
     }
     
     PaymentProcessor::addToRevenue(amount, vehicle);
-    DataStorage::recordTransaction(userId, vehicle, spotType, spotId, duration, amount, methodUsed);
+    DataStorage::recordTransaction(userId, vehicle, spotType, spotId, duration, amount, methodUsed, startTime, endTime);
   }
 
   friend void showUserContact(const ParkingSystemUser &user);
@@ -2086,6 +2499,18 @@ ParkingSystemUser* authenticateParkingUser(unordered_map<string, ParkingSystemUs
     ParkingSystemUser* user = userIt->second;
     if (user->checkPassword(password)) {
         cout << "Welcome " << user->getUserId() << "!\n";
+        
+        // Check if user has parking status in file and update memory
+        string spotId;
+        int hourlyRate = 0;
+        ReservationTime startTime, endTime;
+        if (DataStorage::getUserParkingStatusFromFile(userId, spotId, hourlyRate, startTime, endTime)) {
+            if (!spotId.empty()) {
+                user->setParkingStatus(true, spotId, hourlyRate, startTime, endTime);
+                cout << "Parking status loaded from file: Currently parked at spot " << spotId << "\n";
+            }
+        }
+        
         return user;
     } else {
         cout << "Invalid password!\n";
@@ -2386,41 +2811,100 @@ void loadUserRecords(unordered_map<string, ParkingSystemUser *> &userDatabase, c
         securityA.erase(remove(securityA.begin(), securityA.end(), '\n'), securityA.end());
         securityA.erase(remove(securityA.begin(), securityA.end(), '\r'), securityA.end());
 
+        // Extract parking status
+        bool isParked = false;
+        string spotId = "";
+        int hourlyRate = 0;
+        ReservationTime startTime = {0}, endTime = {0};
+        
+        for (const string &f : dataFields) {
+            if (f.find("Parked:") == 0) {
+                isParked = (f.substr(7) == "true");
+            } else if (f.find("Spot:") == 0) {
+                spotId = f.substr(5);
+            } else if (f.find("HourlyRate:") == 0) {
+                hourlyRate = stoi(f.substr(11));
+            } else if (f.find("StartTime:") == 0) {
+                string startTimeStr = f.substr(10);
+                // Parse start time
+                size_t pos1 = startTimeStr.find('-');
+                size_t pos2 = startTimeStr.find('-', pos1 + 1);
+                size_t pos3 = startTimeStr.find('_', pos2 + 1);
+                size_t pos4 = startTimeStr.find(':', pos3 + 1);
+                size_t pos5 = startTimeStr.find(':', pos4 + 1);
+                
+                if (pos1 != string::npos && pos2 != string::npos && pos3 != string::npos && 
+                    pos4 != string::npos && pos5 != string::npos) {
+                    startTime.year = stoi(startTimeStr.substr(0, pos1));
+                    startTime.month = stoi(startTimeStr.substr(pos1 + 1, pos2 - pos1 - 1));
+                    startTime.day = stoi(startTimeStr.substr(pos2 + 1, pos3 - pos2 - 1));
+                    startTime.hour = stoi(startTimeStr.substr(pos3 + 1, pos4 - pos3 - 1));
+                    startTime.minute = stoi(startTimeStr.substr(pos4 + 1, pos5 - pos4 - 1));
+                    startTime.second = stoi(startTimeStr.substr(pos5 + 1));
+                }
+            } else if (f.find("EndTime:") == 0) {
+                string endTimeStr = f.substr(8);
+                // Parse end time
+                size_t pos1 = endTimeStr.find('-');
+                size_t pos2 = endTimeStr.find('-', pos1 + 1);
+                size_t pos3 = endTimeStr.find('_', pos2 + 1);
+                size_t pos4 = endTimeStr.find(':', pos3 + 1);
+                size_t pos5 = endTimeStr.find(':', pos4 + 1);
+                
+                if (pos1 != string::npos && pos2 != string::npos && pos3 != string::npos && 
+                    pos4 != string::npos && pos5 != string::npos) {
+                    endTime.year = stoi(endTimeStr.substr(0, pos1));
+                    endTime.month = stoi(endTimeStr.substr(pos1 + 1, pos2 - pos1 - 1));
+                    endTime.day = stoi(endTimeStr.substr(pos2 + 1, pos3 - pos2 - 1));
+                    endTime.hour = stoi(endTimeStr.substr(pos3 + 1, pos4 - pos3 - 1));
+                    endTime.minute = stoi(endTimeStr.substr(pos4 + 1, pos5 - pos4 - 1));
+                    endTime.second = stoi(endTimeStr.substr(pos5 + 1));
+                }
+            }
+        }
+
         // Skip if user already loaded
         if (userDatabase.find(userId) != userDatabase.end()) {
             continue;
         }
 
         // Create appropriate user type with security questions
+        ParkingSystemUser* newUser = nullptr;
         switch (vehicleTypeCode) {
             case 0: 
-                userDatabase[userId] = new BicycleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new BicycleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             case 1: 
-                userDatabase[userId] = new Car5SeaterUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new Car5SeaterUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             case 2: 
-                userDatabase[userId] = new Car7SeaterUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new Car7SeaterUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             case 3: 
-                userDatabase[userId] = new MotorcycleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new MotorcycleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             case 4: 
-                userDatabase[userId] = new ElectricVehicleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new ElectricVehicleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             case 5: 
-                userDatabase[userId] = new DisabledVehicleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
+                newUser = new DisabledVehicleUser(userName, userId, userPassword, userContact, userEmail, securityQ, securityA);
                 break;
             default:
                 continue;
         }
         
+        // Set parking status if user was parked
+        if (isParked && !spotId.empty()) {
+            newUser->setParkingStatus(true, spotId, hourlyRate, startTime, endTime);
+        }
+        
+        userDatabase[userId] = newUser;
         loadedCount++;
     }
 
     inputFile.close();
-    cout << "Loaded " << loadedCount << " users from file.\n";
 }
+
 // Main application function
 int main() {
 
@@ -2477,6 +2961,11 @@ int main() {
                     }
                 }
 
+                if (userDatabase.find(id) != userDatabase.end()) {
+                    cout << "UserID already exists!\n";
+                    break;
+                }
+
                 string password;
                 while (true) {
                     cout << "Enter Password (min 6 characters): ";
@@ -2527,10 +3016,6 @@ int main() {
                     }
                 } while (vChoice < 1 || vChoice > 6);
 
-                if (userDatabase.find(id) != userDatabase.end()) {
-                    cout << "UserID already exists!\n";
-                    break;
-                }
 
                 switch (vChoice) {
                     case 1:
@@ -2554,7 +3039,7 @@ int main() {
                 }
 
                 userDatabase[id]->saveUserData();
-                cout << "User Registered Successfully with security question!\n";
+                cout << "User Registered Successfully!\n";
                 break;
             }
 
@@ -2579,15 +3064,96 @@ int main() {
                 parkingSystem.displayParkingLayout();
                 
                 VehicleCategory type = user->getVehicleType();
-                vector<string> availableSpots = parkingSystem.findAvailableSpots(type);
                 
-                if (availableSpots.empty()) {
-                    cout << "\nXXX PARKING FULL for your vehicle type XXX!\n";
-                    cout << "Please check back later or try different vehicle type.\n";
-                    break;
+                // Get reservation times
+                ReservationTime startTime, endTime;
+                ReservationTime currentTime = getCurrentTime();
+
+                cout << "\n=== RESERVATION TIME SELECTION ===\n";
+                cout << "Note: Maximum reservation period is 5 days from now\n";
+                cout << "Minimum reservation duration is 1 hour\n\n";
+
+                // Get start date and time
+                string dateStr, timeStr;
+                bool validInput = false;
+                
+                while (!validInput) {
+                    cout << "Enter reservation START DATE (dd/mm/yyyy): ";
+                    getline(cin, dateStr);
+                    
+                    int day, month, year;
+                    if (!parseDate(dateStr, day, month, year)) {
+                        cout << " INVALID DATE! Please check:\n";
+                        cout << "- Date must be in dd/mm/yyyy format\n";
+                        cout << "- Date cannot be in the past\n";
+                        continue;
+                    }
+                    
+                    cout << "Enter reservation START TIME (hh:mm:ss): ";
+                    getline(cin, timeStr);
+                    
+                    int hour, minute, second;
+                    if (!parseTime(timeStr, hour, minute, second)) {
+                        cout << "INVALID TIME! Please use hh:mm:ss format (e.g., 14:30:00)\n\n";
+                        continue;
+                    }
+                    
+                    startTime.day = day;
+                    startTime.month = month;
+                    startTime.year = year;
+                    startTime.hour = hour;
+                    startTime.minute = minute;
+                    startTime.second = second;
+                    validInput = true;
                 }
                 
-                cout << "\nAvailable spots for your vehicle type: ";
+                validInput = false;
+                while (!validInput) {
+                    cout << "Enter reservation END DATE (dd/mm/yyyy): ";
+                    getline(cin, dateStr);
+                    
+                    int day, month, year;
+                    if (!parseDate(dateStr, day, month, year)) {
+                        cout << " INVALID DATE! Please check:\n";
+                        cout << "- Date must be in dd/mm/yyyy format\n";
+                        cout << "- Date cannot be in the past\n";
+                        continue;
+                    }
+                    
+                    cout << "Enter reservation END TIME (hh:mm:ss): ";
+                    getline(cin, timeStr);
+                    
+                    int hour, minute, second;
+                    if (!parseTime(timeStr, hour, minute, second)) {
+                        cout << " INVALID TIME! Please use hh:mm:ss format (e.g., 16:30:00)\n\n";
+                        continue;
+                    }
+                    
+                    endTime.day = day;
+                    endTime.month = month;
+                    endTime.year = year;
+                    endTime.hour = hour;
+                    endTime.minute = minute;
+                    endTime.second = second;
+                    validInput = true;
+                }
+
+                if (!isValidReservationTime(startTime, endTime)) {
+                    cout << "Reservation failed! Please adjust your time selection.\n";
+                    break;
+                }
+
+                double durationHours = calculateHoursBetween(startTime, endTime);
+
+                // Check available spots for the selected time
+                vector<string> availableSpots = parkingSystem.findAvailableSpotsForTime(type, startTime, endTime);
+                
+                if (availableSpots.empty()) {
+                    cout << "\nXXX NO AVAILABLE SPOTS for your selected time period XXX!\n";
+                    break;
+                }
+
+                cout << "\nAvailable spots for your selected time: ";
                 for (size_t i = 0; i < availableSpots.size(); i++) {
                     cout << availableSpots[i];
                     if (i < availableSpots.size() - 1) cout << ", ";
@@ -2595,7 +3161,7 @@ int main() {
                 cout << "\n";
                 
                 string spotId;
-                cout << "\nEnter Spot ID to book (e.g., A1, B3, C5): ";
+                cout << "\nEnter Spot ID to book : ";
                 getline(cin, spotId);
                 
                 for (char &c : spotId) {
@@ -2603,42 +3169,24 @@ int main() {
                 }
                 
                 if (spotId.length() < 2 || !isalpha(spotId[0]) || !isdigit(spotId[1])) {
-                    cout << "ERROR: Invalid spot ID format! Use format like A1, B2, etc.\n";
+                    cout << "ERROR: Invalid spot ID format! \n";
                     break;
                 }
                 
                 ParkingSpot* selectedSpot = parkingSystem.findSpotById(spotId);
                 if (!selectedSpot) {
                     cout << "ERROR: Spot ID '" << spotId << "' not found!\n";
-                    cout << "Please enter valid Spot ID from map (e.g., A1, B2, C3)\n";
+                    cout << "Please enter valid Spot ID from map \n";
                     break;
                 }
                 
-                int durationHours = 1;
-                if (selectedSpot->getSpotCategory() == ParkingSpotCategory::FAMILY_SPOT) {
-                    cout << "NOTE: This is FAMILY spot. Minimum booking duration is 8 hours.\n";
-                    cout << "Enter booking duration (hours): ";
-                    string durationStr;
-                    getline(cin, durationStr);
-                    
-                    if (!parseIntInRange(durationStr, durationHours, 8, 24*7)) {
-                        cout << "Invalid duration! Family spots require 8-168 hours.\n";
-                        break;
-                    }
-                } else {
-                    cout << "Enter booking duration (hours, default 1): ";
-                    string durationStr;
-                    getline(cin, durationStr);
-                    
-                    if (!durationStr.empty()) {
-                        if (!parseIntInRange(durationStr, durationHours, 1, 24*7)) {
-                            cout << "Invalid duration! Using default 1 hour.\n";
-                            durationHours = 1;
-                        }
-                    }
+                // Check if spot is available for the selected time
+                if (selectedSpot->isReservedForTime(startTime) || selectedSpot->isReservedForTime(endTime)) {
+                    cout << "Spot " << spotId << " is already reserved for your selected time period!\n";
+                    break;
                 }
                 
-                if (!parkingSystem.reserveParkingSpot(spotId, type, durationHours)) {
+                if (!parkingSystem.reserveParkingSpot(spotId, type, startTime, endTime, static_cast<int>(durationHours))) {
                     cout << "Failed to reserve spot " << spotId << "!\n";
                     break;
                 }
@@ -2656,15 +3204,15 @@ int main() {
                 bool isCharging = (spotType == ParkingSpotCategory::EV_CHARGING_SPOT);
                 
                 int hourlyRate = PricingCalculator::calculateRate(occupied, capacity, type, spotType, isCharging);
-                int totalRate = hourlyRate * durationHours;
+                int totalRate = static_cast<int>(hourlyRate * durationHours);
                 
                 cout << "Hourly Rate: Rs " << hourlyRate << "\n";
-                cout << "Total Rate for " << durationHours << " hours: Rs " << totalRate << "\n";
+                cout << "Total Rate for " << fixed << setprecision(1) << durationHours << " hours: Rs " << totalRate << "\n";
 
                 user->recordParkingUsage();
                 int finalRate = user->applyLoyaltyDiscount(totalRate);
 
-                user->setParkingStatus(true, spotId, hourlyRate, durationHours);
+                user->setParkingStatus(true, spotId, hourlyRate, startTime, endTime);
                 cout << "Booking confirmed! Payment processed when you release spot.\n";
                 
                 parkingSystem.saveCurrentLayout();
@@ -2835,14 +3383,21 @@ int main() {
                 string parkedSpotId = user->getCurrentSpotId();
                 VehicleCategory vehicle = user->getVehicleType();
                 ParkingSpotCategory spotType = user->getSpotType();
+                ReservationTime startTime = user->getParkingStartTimeStruct();
+                ReservationTime endTime = user->getParkingEndTimeStruct();
                 
-                int totalAmount = user->calculateParkingFee();
+                ReservationTime actualEndTime = getCurrentTime();
+                cout << "Return time: ";
+                displayTime(actualEndTime);
+                cout << "\n";
+
+                int totalAmount = user->calculateParkingFee(actualEndTime);
                 totalAmount = user->applyLoyaltyDiscount(totalAmount);
                 
                 cout << "Final amount after discounts: Rs " << totalAmount << "\n";
                 
                 int duration = user->getBookedHours();
-                user->processParkingPayment(totalAmount, vehicle, spotType, parkedSpotId, duration);
+                user->processParkingPayment(totalAmount, vehicle, spotType, parkedSpotId, duration, startTime, actualEndTime);
                 
                 if (parkingSystem.releaseParkingSpot(parkedSpotId)) {
                     user->setParkingStatus(false);
@@ -2933,7 +3488,7 @@ int main() {
             }
 
             case 12: {  // Exit
-                cout << "Exiting Smart Parking System. Goodbye!\n";
+                cout << "See You Again!\n";
                 parkingSystem.saveCurrentLayout();
                 DataStorage::saveSpotDatabase(parkingSystem);
                 DataStorage::saveSpotStates(parkingSystem);
