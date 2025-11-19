@@ -2924,13 +2924,13 @@ int main() {
         cout << "3. Admin Login\n4. Rate System (1-5 stars)\n";
         cout << "5. Add Review\n6. Show User Score\n";
         cout << "7. Release Spot & Calculate Payment\n8. View Parking Map\n";
-        cout << "9. View Fine Rules\n10. User Settings\n11. Reset Password (Security Question)\n12. Exit\n";
+        cout << "9. View Fine Rules\n10. User Settings\n11. Exit\n";
         cout << "Enter choice: ";
         string line;
         if (!getline(cin, line)) break;
 
-        if (!parseIntInRange(line, choice, 1, 12)) {
-            cout << "Invalid choice! Please enter a number 1-12.\n";
+        if (!parseIntInRange(line, choice, 1, 11)) {
+            cout << "Invalid choice! Please enter a number 1-11.\n";
             continue;
         }
 
@@ -3472,22 +3472,7 @@ int main() {
                 break;
             }
 
-            case 11: {  // Reset Password with Security Question
-                if (userDatabase.empty()) {
-                    cout << "No users registered yet!\n";
-                    break;
-                }
-                
-                ParkingSystemUser* user = resetPasswordWithSecurityQuestion(userDatabase);
-                if (user) {
-                    cout << "Password reset successful! You can now login with your new password.\n";
-                } else {
-                    cout << "Password reset failed!\n";
-                }
-                break;
-            }
-
-            case 12: {  // Exit
+            case 11: {  // Exit
                 cout << "See You Again!\n";
                 parkingSystem.saveCurrentLayout();
                 DataStorage::saveSpotDatabase(parkingSystem);
@@ -3500,7 +3485,7 @@ int main() {
                 break;
             }
         }
-    } while (choice != 12);
+    } while (choice != 11);
   } catch (const std::exception& e) {
         cout << "Error: " << e.what() << endl;
         cout << "The program will now exit." << endl;
